@@ -6,8 +6,9 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "Node.js is r
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { throw "npm is required." }
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw "Docker Desktop is required and must be running." }
 
-if (-not $env:OPENAI_API_KEY -and $env:AIDEVOS_DEFAULT_PROVIDER -ne "ollama" -and $env:AIDEVOS_DEFAULT_PROVIDER -ne "litellm") {
-  throw "Set OPENAI_API_KEY, or explicitly set AIDEVOS_DEFAULT_PROVIDER to ollama/litellm."
+$provider = $env:AIDEVOS_DEFAULT_PROVIDER
+if (-not $env:OPENAI_API_KEY -and $provider -ne "ollama" -and $provider -ne "litellm" -and $provider -ne "nvidia") {
+  throw "Set OPENAI_API_KEY, or explicitly set AIDEVOS_DEFAULT_PROVIDER to ollama/litellm/nvidia."
 }
 
 Write-Host "[1/5] Installing dependencies..." -ForegroundColor Yellow
