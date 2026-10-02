@@ -34,11 +34,11 @@ function App() {
         const data = JSON.parse(event.data);
         if (event.type === "mission.completed" || event.type === "mission.failed") setRunning(false);
         if (data?.task) setSelected(data.task);
-        setEvents(prev => [{ at: new Date().toLocaleTimeString(), text: event.type.replace("mission.", ""), icon: event.type.includes("agent") ? "bot" : "terminal" }, ...prev].slice(0, 8));
+        setEvents(prev => [{ at: new Date().toLocaleTimeString(), text: event.type.replace("mission.", ""), icon: event.type.includes("agent") ? "bot" : event.type.includes("tool") ? "code" : "terminal" }, ...prev].slice(0, 8));
         refresh().catch(() => undefined);
       } catch { /* ignore malformed event */ }
     };
-    ["mission.started", "mission.agent.started", "mission.agent.completed", "mission.completed", "mission.failed"].forEach(name => source.addEventListener(name, handle));
+    ["mission.started", "mission.agent.started", "mission.agent.completed", "mission.tool.started", "mission.tool.completed", "mission.completed", "mission.failed"].forEach(name => source.addEventListener(name, handle));
     return () => source.close();
   }, []);
 
