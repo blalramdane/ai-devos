@@ -7,6 +7,7 @@ export interface DevOSAgentOptions {
   workspace: string;
   executor: SandboxExecutor;
   model?: string;
+  defaultModel?: string;
   maxTurns?: number;
   telemetry?: (event: { phase: "started" | "completed"; tool: string; message: string; data?: Record<string, unknown> }) => void | Promise<void>;
 }
@@ -21,7 +22,7 @@ export function createDevOSAgent(options: DevOSAgentOptions) {
 
   const agent = new Agent({
     name: "AI DevOS Software Engineer",
-    model: options.model ?? "openai/gpt-5.6-luna",
+    model: options.model ?? options.defaultModel ?? `${process.env.AIDEVOS_DEFAULT_PROVIDER ?? "openai"}/${process.env.AIDEVOS_DEFAULT_PROVIDER === "nvidia" ? (process.env.AIDEVOS_NVIDIA_MODEL ?? "openai/gpt-oss-20b") : process.env.AIDEVOS_DEFAULT_PROVIDER === "ollama" ? (process.env.AIDEVOS_OLLAMA_MODEL ?? "qwen3:4b") : process.env.AIDEVOS_DEFAULT_PROVIDER === "litellm" ? (process.env.AIDEVOS_LITELLM_MODEL ?? "gpt-5.6-luna") : (process.env.AIDEVOS_OPENAI_MODEL ?? "gpt-5.6-luna")}`,
     instructions: [
       "You are the execution agent inside AI DevOS.",
       "Inspect before changing files.",
