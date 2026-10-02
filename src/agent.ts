@@ -8,6 +8,7 @@ export interface DevOSAgentOptions {
   executor: SandboxExecutor;
   model?: string;
   maxTurns?: number;
+  telemetry?: (event: { phase: "started" | "completed"; tool: string; message: string; data?: Record<string, unknown> }) => void | Promise<void>;
 }
 
 export function createDevOSAgent(options: DevOSAgentOptions) {
@@ -15,6 +16,7 @@ export function createDevOSAgent(options: DevOSAgentOptions) {
   const tools = createToolGateway({
     workspace: options.workspace,
     executor: options.executor,
+    onEvent: options.telemetry,
   });
 
   const agent = new Agent({
