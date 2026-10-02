@@ -1,4 +1,4 @@
-import { Agent, Runner, run } from "@openai/agents";
+import { Agent, Runner } from "@openai/agents";
 import { createModelRouterFromEnv } from "./ai/router.js";
 import { createToolGateway } from "./tools/gateway.js";
 import type { SandboxExecutor } from "./sandbox/types.js";
@@ -41,7 +41,7 @@ export function createDevOSAgent(options: DevOSAgentOptions) {
     agent,
     runner,
     async runMission(prompt: string) {
-      return run(agent, prompt, { maxTurns: options.maxTurns ?? 20, context: undefined });
+      return runner.run(agent, prompt, { maxTurns: options.maxTurns ?? 20, context: undefined });
     },
     async close() {
       await modelRouter.close();
