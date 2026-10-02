@@ -2,7 +2,7 @@ export * from "./agent.js";
 export * from "./browser.js";
 export * from "./control-plane.js";
 export * from "./domain.js";
-export * from "./events.js";
+export { missionEvent } from "./events.js";
 export * from "./memory.js";
 export * from "./mission.js";
 export * from "./policy.js";
