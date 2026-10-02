@@ -65,7 +65,7 @@ export function createModelRouterFromEnv(env: NodeJS.ProcessEnv = process.env): 
   const openaiModel = env.AIDEVOS_OPENAI_MODEL ?? "gpt-5.6-luna";
   const ollamaModel = env.AIDEVOS_OLLAMA_MODEL ?? "qwen3:4b";
   const litellmModel = env.AIDEVOS_LITELLM_MODEL ?? openaiModel;
-  const nvidiaModel = env.AIDEVOS_NVIDIA_MODEL ?? "openai/gpt-oss-20b";
+  const nvidiaModel = env.AIDEVOS_NVIDIA_MODEL ?? "poolside/laguna-xs-2.1";
 
   return new ModelRouter({
     defaultProvider: (env.AIDEVOS_DEFAULT_PROVIDER as ModelProviderKind | undefined) ?? "openai",
@@ -96,6 +96,7 @@ export function createModelRouterFromEnv(env: NodeJS.ProcessEnv = process.env): 
         baseURL: env.AIDEVOS_NVIDIA_BASE_URL ?? "https://integrate.api.nvidia.com/v1",
         apiKey: env.NVIDIA_API_KEY,
         useResponses: false,
+        bufferStreamedToolCalls: true,
       },
     },
   });
