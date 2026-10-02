@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test",
-    "check": "tsc --noEmit -p tsconfig.json"
+    "check": "tsc --noEmit -p tsconfig.json",
+    "cli": "node dist/cli.js"
   },
   "dependencies": {
     "@openai/agents": "^0.18.0",
@@ -17,5 +18,8 @@
     "@types/node": "^24.0.0",
     "playwright": "^1.63.0",
     "typescript": "^5.0.0"
+  },
+  "bin": {
+    "aidevos": "./dist/cli.js"
   }
 }
