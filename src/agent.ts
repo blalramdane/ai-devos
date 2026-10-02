@@ -22,7 +22,7 @@ export function createDevOSAgent(options: DevOSAgentOptions) {
 
   const agent = new Agent({
     name: "AI DevOS Software Engineer",
-    model: options.model ?? options.defaultModel ?? `${process.env.AIDEVOS_DEFAULT_PROVIDER ?? "openai"}/${process.env.AIDEVOS_DEFAULT_PROVIDER === "nvidia" ? (process.env.AIDEVOS_NVIDIA_MODEL ?? "openai/gpt-oss-20b") : process.env.AIDEVOS_DEFAULT_PROVIDER === "ollama" ? (process.env.AIDEVOS_OLLAMA_MODEL ?? "qwen3:4b") : process.env.AIDEVOS_DEFAULT_PROVIDER === "litellm" ? (process.env.AIDEVOS_LITELLM_MODEL ?? "gpt-5.6-luna") : (process.env.AIDEVOS_OPENAI_MODEL ?? "gpt-5.6-luna")}`,
+    model: options.model ?? options.defaultModel ?? `${process.env.AIDEVOS_DEFAULT_PROVIDER ?? "openai"}/${process.env.AIDEVOS_DEFAULT_PROVIDER === "nvidia" ? (process.env.AIDEVOS_NVIDIA_MODEL ?? "poolside/laguna-xs-2.1") : process.env.AIDEVOS_DEFAULT_PROVIDER === "ollama" ? (process.env.AIDEVOS_OLLAMA_MODEL ?? "qwen3:4b") : process.env.AIDEVOS_DEFAULT_PROVIDER === "litellm" ? (process.env.AIDEVOS_LITELLM_MODEL ?? "gpt-5.6-luna") : (process.env.AIDEVOS_OPENAI_MODEL ?? "gpt-5.6-luna")}`,
     instructions: [
       "You are the execution agent inside AI DevOS.",
       "Inspect before changing files.",
@@ -37,6 +37,9 @@ export function createDevOSAgent(options: DevOSAgentOptions) {
 
   const runner = new Runner({
     modelProvider: modelRouter,
+    modelSettings: {
+      timeoutMs: 120_000,
+    },
     tracingDisabled: process.env.NODE_ENV === "test",
   });
 
