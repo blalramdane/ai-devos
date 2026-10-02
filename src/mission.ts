@@ -23,8 +23,46 @@ export class MissionRunner {
     const agentPrompt = ["Execute this AI DevOS mission inside the provided project workspace.", "Do not claim completion without verification evidence.", `Project: ${request.project.name}`, `Workspace: ${request.project.rootPath}`, "", request.prompt, "", "Inspect before changing files. Use the workspace tools for all changes."].join("\n");
     await setStatus("executing");
     await this.emit({ id: crypto.randomUUID(), taskId: task.id, type: "agent.started", timestamp: new Date().toISOString(), message: "Agent execution started" });
-    const result = await this.options.runAgent(agentPrompt);
-    await this.emit({ id: crypto.randomUUID(), taskId: task.id, type: "agent.completed", timestamp: new Date().toISOString(), message: "Agent execution completed" });
+    let result: { finalOutput?: string };
+    try {
+      result = await this.options.runAgent(agentPrompt);
+      await this.emit({ id: crypto.randomUUID(), taskId: task.id, type: "agent.completed", timestamp: new Date().toISOString(), message: "Agent execution completed" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      const failure: Evidence = {
+        id: `${request.taskId}-agent-error`,
+        kind: "command",
+        title: "Agent execution",
+        passed: false,
+        summary: message,
+      };
+      task = status(task, "failed");
+      await persist();
+      await this.emit({
+        id: crypto.randomUUID(),
+        taskId: task.id,
+        type: "verification",
+        timestamp: new Date().toISOString(),
+        message: "Agent execution failed",
+        data: { error: message, stack },
+      });
+      await this.options.memory.add({
+        id: `${request.taskId}-agent-error`,
+        projectId: request.project.id,
+        category: "bug",
+        content: `Agent execution failed: ${message}`,
+        createdAt: new Date().toISOString(),
+        sourceTaskId: request.taskId,
+      });
+      const report = buildVerificationReport(request.taskId, [failure]);
+      return {
+        task,
+        report,
+        recoveryAttempts: 0,
+        repairOutputs: [],
+      };
+    }
     await setStatus("testing");
     const commands = request.verificationCommands ?? [];
     let evidence: Evidence[] = []; let recoveryAttempts = 0; let repairOutputs: string[] = [];

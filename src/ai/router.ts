@@ -1,7 +1,7 @@
 import { OpenAIProvider } from "@openai/agents";
 import type { Model, ModelProvider } from "@openai/agents";
 
-export type ModelProviderKind = "openai" | "ollama" | "litellm";
+export type ModelProviderKind = "openai" | "ollama" | "litellm" | "nvidia";
 
 export interface ModelRoute {
   provider: ModelProviderKind;
@@ -51,7 +51,7 @@ export class ModelRouter implements ModelProvider {
   private resolve(modelName?: string): { provider: ModelProviderKind; model: string } {
     if (modelName?.includes("/")) {
       const [prefix, ...rest] = modelName.split("/");
-      if (prefix === "openai" || prefix === "ollama" || prefix === "litellm") {
+      if (prefix === "openai" || prefix === "ollama" || prefix === "litellm" || prefix === "nvidia") {
         return { provider: prefix, model: rest.join("/") };
       }
     }
@@ -65,6 +65,7 @@ export function createModelRouterFromEnv(env: NodeJS.ProcessEnv = process.env): 
   const openaiModel = env.AIDEVOS_OPENAI_MODEL ?? "gpt-5.6-luna";
   const ollamaModel = env.AIDEVOS_OLLAMA_MODEL ?? "qwen3:4b";
   const litellmModel = env.AIDEVOS_LITELLM_MODEL ?? openaiModel;
+  const nvidiaModel = env.AIDEVOS_NVIDIA_MODEL ?? "poolside/laguna-xs-2.1";
 
   return new ModelRouter({
     defaultProvider: (env.AIDEVOS_DEFAULT_PROVIDER as ModelProviderKind | undefined) ?? "openai",
@@ -87,6 +88,13 @@ export function createModelRouterFromEnv(env: NodeJS.ProcessEnv = process.env): 
         model: litellmModel,
         baseURL: env.AIDEVOS_LITELLM_BASE_URL ?? "http://127.0.0.1:4000/v1",
         apiKey: env.AIDEVOS_LITELLM_API_KEY ?? env.OPENAI_API_KEY ?? "local",
+        useResponses: false,
+      },
+      nvidia: {
+        provider: "nvidia",
+        model: nvidiaModel,
+        baseURL: env.AIDEVOS_NVIDIA_BASE_URL ?? "https://integrate.api.nvidia.com/v1",
+        apiKey: env.NVIDIA_API_KEY,
         useResponses: false,
       },
     },

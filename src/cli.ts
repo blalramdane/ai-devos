@@ -49,13 +49,33 @@ if (!project) {
 }
 
 const executor = new DockerSandboxExecutor();
-const agent = createDevOSAgent({ workspace: project.rootPath, executor });
+
+const printEvent = (prefix: string, message: string, data?: Record<string, unknown>) => {
+  const suffix = data && Object.keys(data).length > 0 ? ` ${JSON.stringify(data)}` : "";
+  console.log(`[${prefix}] ${message}${suffix}`);
+};
+
+const agent = createDevOSAgent({
+  workspace: project.rootPath,
+  executor,
+  telemetry: (event) => printEvent(`TOOL ${event.phase.toUpperCase()}`, event.message, event.data),
+});
 
 const runner = new MissionRunner({
   runAgent: (missionPrompt) => agent.runMission(missionPrompt),
   executor,
   memory: new FileMemoryStore(resolve(dataDir, "memory")),
   tasks: new TaskStore(dataDir),
+  onEvent: (event) => {
+    const labels: Record<string, string> = {
+      status: "MISSION",
+      "agent.started": "AGENT",
+      "agent.completed": "AGENT",
+      recovery: "RECOVERY",
+      verification: "VERIFY",
+    };
+    printEvent(labels[event.type] ?? event.type.toUpperCase(), event.message, event.data);
+  },
 });
 
 try {
