@@ -95,7 +95,7 @@ export function createModelRouterFromEnv(env: NodeJS.ProcessEnv = process.env): 
         model: nvidiaModel,
         baseURL: env.AIDEVOS_NVIDIA_BASE_URL ?? "https://integrate.api.nvidia.com/v1",
         apiKey: env.NVIDIA_API_KEY,
-        useResponses: true,
+        useResponses: false,
       },
     },
   });
