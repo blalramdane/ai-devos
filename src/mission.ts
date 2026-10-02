@@ -2,24 +2,30 @@ import type { Evidence, Project, Task, TaskStatus, VerificationReport } from "./
 import { buildVerificationReport } from "./verification.js";
 import type { SandboxExecutor } from "./sandbox/types.js";
 import { FileMemoryStore } from "./memory.js";
+import { RecoveryEngine } from "./recovery.js";
+import type { TaskStore } from "./store.js";
 
 export interface MissionRequest {
   taskId: string;
   project: Project;
   prompt: string;
   verificationCommands?: string[];
+  maxRecoveryAttempts?: number;
 }
 
 export interface MissionResult {
   task: Task;
   report: VerificationReport;
   agentOutput?: string;
+  recoveryAttempts: number;
+  repairOutputs: string[];
 }
 
 export interface MissionRunnerOptions {
   runAgent: (prompt: string) => Promise<{ finalOutput?: string }>;
   executor: SandboxExecutor;
   memory: FileMemoryStore;
+  tasks?: TaskStore;
 }
 
 function status(task: Task, value: TaskStatus): Task {
@@ -40,7 +46,12 @@ export class MissionRunner {
       updatedAt: new Date().toISOString(),
     };
 
+    const persist = async () => {
+      if (this.options.tasks) await this.options.tasks.upsert(task);
+    };
+
     task = status(task, "planning");
+    await persist();
 
     const agentPrompt = [
       "Execute this AI DevOS mission inside the provided project workspace.",
@@ -50,44 +61,58 @@ export class MissionRunner {
       "",
       request.prompt,
       "",
-      "When implementation is complete, run the most relevant tests or checks available.",
+      "Inspect before changing files. Use the workspace tools for all changes.",
     ].join("\n");
 
     task = status(task, "executing");
+    await persist();
     const result = await this.options.runAgent(agentPrompt);
-    task = status(task, "testing");
 
-    const evidence: Evidence[] = [];
-    for (const command of request.verificationCommands ?? []) {
-      const result = await this.options.executor.run(command, request.project.rootPath);
-      evidence.push({
-        id: `${request.taskId}-${evidence.length + 1}`,
-        kind: "command",
-        title: `Verification: ${command}`,
-        passed: !result.blocked && result.exitCode === 0,
-        summary: result.blocked
-          ? "Blocked by execution policy."
-          : result.exitCode === 0
-            ? result.stdout.trim() || "Command completed successfully."
-            : result.stderr.trim() || `Command exited with code ${result.exitCode}.`,
-        command,
-        exitCode: result.exitCode,
-        metadata: { sandboxed: result.sandboxed, timedOut: result.timedOut },
+    task = status(task, "testing");
+    await persist();
+
+    const commands = request.verificationCommands ?? [];
+    let evidence: Evidence[] = [];
+    let recoveryAttempts = 0;
+    let repairOutputs: string[] = [];
+
+    if (commands.length > 0) {
+      const recovery = new RecoveryEngine({
+        executor: this.options.executor,
+        maxAttempts: request.maxRecoveryAttempts ?? 3,
+        repair: async (failed, attempt) => {
+          const failureContext = failed.map((item) => `${item.title}: ${item.summary}`).join("\n");
+          const repair = await this.options.runAgent([
+            `Verification failed on recovery attempt ${attempt}.`,
+            "Diagnose the failure and make the smallest safe fix.",
+            "Do not bypass execution policy.",
+            "",
+            failureContext,
+          ].join("\n"));
+          return repair.finalOutput ?? "Agent applied a recovery attempt.";
+        },
       });
+
+      const recovered = await recovery.verifyAndRecover(request.taskId, request.project.rootPath, commands);
+      evidence = recovered.evidence;
+      recoveryAttempts = recovered.attempts;
+      repairOutputs = recovered.repairOutputs;
     }
 
     task = status(task, "verifying");
-    const report = buildVerificationReport(request.taskId, evidence);
+    await persist();
 
+    const report = buildVerificationReport(request.taskId, evidence);
     task = status(task, report.verified ? "completed" : "failed");
+    await persist();
 
     await this.options.memory.add({
       id: `${request.taskId}-mission`,
       projectId: request.project.id,
       category: report.verified ? "lesson" : "bug",
       content: report.verified
-        ? `Mission verified. Evidence: ${evidence.map((item) => item.title).join(", ")}`
-        : `Mission failed verification. Evidence: ${evidence.map((item) => item.summary).join(" | ")}`,
+        ? `Mission verified after ${recoveryAttempts || 1} verification attempt(s).`
+        : `Mission failed verification after ${recoveryAttempts || 1} attempt(s).`,
       createdAt: new Date().toISOString(),
       sourceTaskId: request.taskId,
     });
@@ -96,6 +121,8 @@ export class MissionRunner {
       task,
       report,
       agentOutput: result.finalOutput,
+      recoveryAttempts,
+      repairOutputs,
     };
   }
 }
