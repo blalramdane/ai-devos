@@ -4,12 +4,14 @@ import type { SandboxExecutor } from "./sandbox/types.js";
 import { FileMemoryStore } from "./memory.js";
 import { RecoveryEngine } from "./recovery.js";
 import type { TaskStore } from "./store.js";
+import type { BrowserCheck, BrowserVerifier } from "./browser.js";
 
 export interface MissionRequest {
   taskId: string;
   project: Project;
   prompt: string;
   verificationCommands?: string[];
+  browserChecks?: BrowserCheck[];
   maxRecoveryAttempts?: number;
 }
 
@@ -26,6 +28,7 @@ export interface MissionRunnerOptions {
   executor: SandboxExecutor;
   memory: FileMemoryStore;
   tasks?: TaskStore;
+  browserVerifier?: BrowserVerifier;
 }
 
 function status(task: Task, value: TaskStatus): Task {
@@ -93,10 +96,31 @@ export class MissionRunner {
         },
       });
 
-      const recovered = await recovery.verifyAndRecover(request.taskId, request.project.rootPath, commands);
+      const recovered = await recovery.verifyAndRecover(
+        request.taskId,
+        request.project.rootPath,
+        commands,
+      );
       evidence = recovered.evidence;
       recoveryAttempts = recovered.attempts;
       repairOutputs = recovered.repairOutputs;
+    }
+
+    if (request.browserChecks && request.browserChecks.length > 0) {
+      if (!this.options.browserVerifier) {
+        evidence.push({
+          id: `${request.taskId}-browser`,
+          kind: "browser",
+          title: "Browser verification",
+          passed: false,
+          summary: "Browser checks were requested but no BrowserVerifier is configured.",
+        });
+      } else {
+        for (const check of request.browserChecks) {
+          const result = await this.options.browserVerifier.verify(check);
+          evidence.push(result.evidence);
+        }
+      }
     }
 
     task = status(task, "verifying");
