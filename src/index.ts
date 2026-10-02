@@ -6,6 +6,8 @@ export * from "./verification.js";
 export * from "./ai/router.js";
 export * from "./agent.js";
 export * from "./mission.js";
+export * from "./recovery.js";
+export * from "./store.js";
 export * from "./sandbox/types.js";
 export * from "./sandbox/docker.js";
 export * from "./tools/gateway.js";
