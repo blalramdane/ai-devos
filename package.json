@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test",
     "check": "tsc --noEmit -p tsconfig.json",
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "control-plane": "node dist/server.js"
   },
   "dependencies": {
     "@openai/agents": "^0.18.0",
