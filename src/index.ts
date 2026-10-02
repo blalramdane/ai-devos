@@ -1,5 +1,6 @@
 export * from "./agent.js";
 export * from "./browser.js";
+export * from "./control-plane.js";
 export * from "./domain.js";
 export * from "./memory.js";
 export * from "./mission.js";
