@@ -9,6 +9,7 @@ test("mission becomes verified when verification commands pass", async () => {
 
   const root = await mkdtemp(tmpdir() + "/aidevos-mission-");
   const calls = [];
+  const events = [];
   const executor = {
     async run(command, cwd) {
       calls.push({ command, cwd });
@@ -28,7 +29,8 @@ test("mission becomes verified when verification commands pass", async () => {
   const runner = new MissionRunner({
     runAgent: async (prompt) => ({ finalOutput: `agent completed: ${prompt.slice(0, 20)}` }),
     executor,
-    memory: new FileMemoryStore(root)
+    memory: new FileMemoryStore(root),
+    onEvent: async (event) => events.push(event)
   });
 
   const result = await runner.execute({
@@ -43,6 +45,8 @@ test("mission becomes verified when verification commands pass", async () => {
   assert.equal(result.report.evidence.length, 1);
   assert.equal(calls.length, 1);
   assert.match(result.agentOutput, /agent completed/);
+  assert.ok(events.some((event) => event.type === "status" && event.message === "executing"));
+  assert.ok(events.some((event) => event.type === "verification" && event.data?.passed === true));
 
   const memory = await new FileMemoryStore(root).list("demo");
   assert.equal(memory.length, 1);
