@@ -40,7 +40,7 @@ export function createControlPlane(options: ControlPlaneOptions) {
         const input = await body(request); const project = await registry.get(input.projectId);
         if (!project) return json(response, 404, { error: "Project not found" });
         const taskId = input.taskId ?? randomUUID(); const executor = new DockerSandboxExecutor();
-        const agent = createDevOSAgent({ workspace: project.rootPath, executor });
+        const agent = createDevOSAgent({ workspace: project.rootPath, executor, telemetry: (event) => events.publish({ type: `mission.tool.${event.phase}`, taskId, data: event }) });
         const runner = new MissionRunner({
           runAgent: async (prompt) => {
             events.publish({ type: "mission.agent.started", taskId, data: { prompt } });
