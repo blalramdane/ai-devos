@@ -2,8 +2,6 @@ import type { Evidence, Project, Task, TaskStatus, VerificationReport } from "./
 import { buildVerificationReport } from "./verification.js";
 import type { SandboxExecutor } from "./sandbox/types.js";
 import { FileMemoryStore } from "./memory.js";
-import { run } from "@openai/agents";
-import type { Agent } from "@openai/agents";
 
 export interface MissionRequest {
   taskId: string;
@@ -19,7 +17,7 @@ export interface MissionResult {
 }
 
 export interface MissionRunnerOptions {
-  agent: Agent;
+  runAgent: (prompt: string) => Promise<{ finalOutput?: string }>;
   executor: SandboxExecutor;
   memory: FileMemoryStore;
 }
@@ -56,7 +54,7 @@ export class MissionRunner {
     ].join("\n");
 
     task = status(task, "executing");
-    const result = await run(this.options.agent, agentPrompt, { maxTurns: 30 });
+    const result = await this.options.runAgent(agentPrompt);
     task = status(task, "testing");
 
     const evidence: Evidence[] = [];
