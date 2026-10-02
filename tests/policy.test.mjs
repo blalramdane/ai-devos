@@ -14,3 +14,7 @@ test("external command is high risk", () => {
 test("destructive command is critical", () => {
   assert.equal(classifyCommand("rm -rf ./tmp"), "critical");
 });
+
+test("destructive patterns catch whitespace variants", () => {
+  assert.equal(classifyCommand("git   reset --hard HEAD~1"), "critical");
+});
