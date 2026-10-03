@@ -71,7 +71,7 @@ export class WorkflowRunner {
         const checkpoint = await handler({ project, workflow, stage });
         stage.status = "completed";
         stage.completedAt = new Date().toISOString();
-        stage.checkpoint = checkpoint;
+        stage.checkpoint = checkpoint === undefined ? undefined : checkpoint;
         stage.error = undefined;
         workflow = await this.workflows.update(project.id, workflow.id, { stages: [...workflow.stages], currentStage: workflow.currentStage + 1, status: "running" });
         await this.events.append({ type: "workflow.stage.completed", workflowId: workflow.id, projectId: project.id, payload: { stage: stage.id, checkpoint } });
