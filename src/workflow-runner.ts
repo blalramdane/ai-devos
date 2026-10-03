@@ -14,6 +14,7 @@ export type WorkflowStageHandler = (context: WorkflowStageContext) => Promise<st
 export interface WorkflowRunnerOptions {
   maxAttempts?: number;
   handlers: Record<string, WorkflowStageHandler>;
+  recoveryHandlers?: Record<string, WorkflowStageHandler>;
 }
 
 export class WorkflowRunner {
@@ -26,8 +27,10 @@ export class WorkflowRunner {
   ) {
     this.maxAttempts = options.maxAttempts ?? 2;
     this.handlers = options.handlers;
+    this.recoveryHandlers = options.recoveryHandlers ?? {};
   }
   private readonly handlers: Record<string, WorkflowStageHandler>;
+  private readonly recoveryHandlers: Record<string, WorkflowStageHandler>;
 
   async start(project: Project, workflow: WorkflowRun) {
     await this.workflows.update(project.id, workflow.id, { status: "running" });
@@ -84,6 +87,39 @@ export class WorkflowRunner {
         if (stage.attempts >= this.maxAttempts) {
           await this.events.append({ type: "workflow.failed", workflowId: workflow.id, projectId: project.id, payload: { stage: stage.id, error: message } });
           return workflow;
+        }
+
+        const recovery = this.recoveryHandlers[stage.id];
+        if (recovery) {
+          await this.events.append({
+            type: "workflow.recovery.started",
+            workflowId: workflow.id,
+            projectId: project.id,
+            payload: { stage: stage.id, attempt: stage.attempts, error: message },
+          });
+          try {
+            const recoveryCheckpoint = await recovery({
+              project,
+              workflow,
+              stage: { ...stage, error: message },
+            });
+            await this.events.append({
+              type: "workflow.recovery.completed",
+              workflowId: workflow.id,
+              projectId: project.id,
+              payload: { stage: stage.id, checkpoint: recoveryCheckpoint },
+            });
+          } catch (recoveryError) {
+            const recoveryMessage = recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+            await this.events.append({
+              type: "workflow.recovery.failed",
+              workflowId: workflow.id,
+              projectId: project.id,
+              payload: { stage: stage.id, error: recoveryMessage },
+            });
+            await this.workflows.update(project.id, workflow.id, { status: "failed", lastError: recoveryMessage });
+            return this.workflows.get(project.id, workflow.id);
+          }
         }
       }
     }
