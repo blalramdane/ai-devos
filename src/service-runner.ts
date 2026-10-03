@@ -28,6 +28,7 @@ export class ServiceRunner {
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
+      detached: process.platform !== "win32",
     });
     if (!child.pid) throw new Error("Failed to start service.");
 
@@ -70,14 +71,23 @@ export class ServiceRunner {
 
   private async stopProcess(child: ChildProcess) {
     if (child.exitCode !== null) return;
-    child.kill("SIGTERM");
+    this.killTree(child, "SIGTERM");
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
-        if (child.exitCode === null) child.kill("SIGKILL");
+        if (child.exitCode === null) this.killTree(child, "SIGKILL");
         resolve();
       }, 3000);
       child.once("exit", () => { clearTimeout(timer); resolve(); });
     });
+  }
+
+  private killTree(child: ChildProcess, signal: NodeJS.Signals) {
+    if (!child.pid) return;
+    if (process.platform === "win32") {
+      spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { windowsHide: true, stdio: "ignore" });
+      return;
+    }
+    try { process.kill(-child.pid, signal); } catch { child.kill(signal); }
   }
 
   private shellArgs(command: string): string[] {
