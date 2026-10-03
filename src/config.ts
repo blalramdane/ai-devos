@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import type { ModelPolicyConfig } from "./model-policy.js";
 
 export type ProviderKind = "ollama" | "openai" | "compatible" | "experiential";
 
@@ -21,6 +22,7 @@ export interface DevOSConfig {
   fallbackRoutes: ModelRoute[];
   dataDir: string;
   maxTurns: number;
+  modelPolicy: ModelPolicyConfig;
 }
 
 function providerDefaults(provider: ProviderKind, env: NodeJS.ProcessEnv) {
@@ -122,5 +124,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): DevOSConfig {
     fallbackRoutes,
     dataDir: resolve(env.AIDEVOS_DATA_DIR ?? ".aidevos"),
     maxTurns: Number(env.AIDEVOS_MAX_TURNS ?? 30),
+    modelPolicy: {
+      mode: env.AIDEVOS_POLICY_MODE === "strict" ? "strict" : "balanced",
+      privacy: env.AIDEVOS_PRIVACY === "local" ? "local" : "cloud-ok",
+      budget: ["low", "standard", "premium"].includes(env.AIDEVOS_BUDGET_TIER ?? "") ? env.AIDEVOS_BUDGET_TIER as "low" | "standard" | "premium" : "standard",
+      maxContext: env.AIDEVOS_MAX_CONTEXT ? Number(env.AIDEVOS_MAX_CONTEXT) : undefined,
+      maxOutput: env.AIDEVOS_MAX_OUTPUT ? Number(env.AIDEVOS_MAX_OUTPUT) : undefined,
+    },
   };
 }
