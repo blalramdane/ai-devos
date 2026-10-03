@@ -43,6 +43,9 @@ Commands:
   workflow approve <projectId> <approvalId>
   workflow events <projectId> <workflowId>
   workflow evidence <projectId> <workflowId>
+  workflow verify-http <projectId> <workflowId> <url> [expectedStatus] [contains]
+  workflow verify-browser <projectId> <workflowId> <url> [selector] [contains]
+  workflow verify-service <projectId> <workflowId> <command> <readyUrl> [browserUrl] [selector] [contains]
   worker once
   worker start
 `);
@@ -182,7 +185,7 @@ async function main() {
         },
         execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
         test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
-        verify: async ({ project, workflow }) => JSON.stringify(await verification.verifyGit(project, workflow.id)),
+        verify: async ({ project, workflow }) => JSON.stringify([...(await verification.verifyConfigured(project, workflow.id)), ...(await verification.verifyGit(project, workflow.id))]),
 
         finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
       },
