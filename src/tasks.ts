@@ -1,0 +1,6 @@
+import { mkdir,readFile,writeFile } from "node:fs/promises"; import { join } from "node:path"; import type {Task,TaskStatus,RiskLevel} from "./domain.js";
+export class TaskStore { constructor(private readonly rootDir:string){} private file(id:string){return join(this.rootDir,id,"tasks.json");}
+async list(id:string):Promise<Task[]>{try{return JSON.parse(await readFile(this.file(id),"utf8")) as Task[]}catch(e){if((e as NodeJS.ErrnoException).code==="ENOENT")return [];throw e;}}
+async create(projectId:string,prompt:string,risk:RiskLevel="low"){const now=new Date().toISOString();const t:Task={id:"task-"+Date.now().toString(36),projectId,prompt,status:"queued",risk,createdAt:now,updatedAt:now};await this.save(projectId,[...(await this.list(projectId)),t]);return t;}
+async update(projectId:string,id:string,status:TaskStatus){const ts=await this.list(projectId),i=ts.findIndex(t=>t.id===id);if(i<0)throw new Error("Unknown task: "+id);ts[i]={...ts[i],status,updatedAt:new Date().toISOString()};await this.save(projectId,ts);return ts[i];}
+private async save(id:string,ts:Task[]){await mkdir(join(this.rootDir,id),{recursive:true});await writeFile(this.file(id),JSON.stringify(ts,null,2),"utf8");}}
