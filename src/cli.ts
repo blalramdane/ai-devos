@@ -35,6 +35,16 @@ Commands:
   remember <projectId> <category> <content>
   tasks <projectId>
   run <projectId> <mission>
+  workflow start <projectId> <mission>
+  workflow enqueue <projectId> <mission>
+  workflow status <projectId> <workflowId>
+  workflow resume <projectId> <workflowId>
+  workflow pause <projectId> <workflowId>
+  workflow approve <projectId> <approvalId>
+  workflow events <projectId> <workflowId>
+  workflow evidence <projectId> <workflowId>
+  worker once
+  worker start
 `);
   process.exit(1);
 }
@@ -119,20 +129,6 @@ async function main() {
     const approvals = new ApprovalStore(config.dataDir);
     const evidence = new EvidenceStore(config.dataDir);
     const verification = new VerificationRunner(evidence);
-    const runner = new WorkflowRunner(workflows, events, approvals, {
-      handlers: {
-        understand: async ({ project }) => JSON.stringify(await auditProject(project)),
-        plan: async ({ workflow }) => {
-          const router = await createModelRouter(config);
-          const decision = router.policy(workflow.mission, config.modelPolicy);
-          return JSON.stringify({ route: decision.route.id, reason: decision.reason, skills: routeSkills(workflow.mission).map((skill) => skill.name) });
-        },
-        execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
-        test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
-        verify: async ({ project, workflow }) => JSON.stringify(await verification.verifyGit(project, workflow.id)),
-        finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
-      },
-    });
     const lock = new WorkflowLock(config.dataDir);
     const workerRunner = new WorkflowRunner(workflows, events, approvals, {
       handlers: {
@@ -151,7 +147,7 @@ async function main() {
     const worker = new WorkflowWorker(workflows, {
       async start(project, workflow) { const release = await lock.acquire(workflow.id); try { return await workerRunner.start(project, workflow); } finally { await release(); } },
       async resume(project, workflowId) { const release = await lock.acquire(workflowId); try { return await workerRunner.resume(project, workflowId); } finally { await release(); } },
-    } as unknown as WorkflowRunner, async (projectId) => registry.get(projectId));
+    }, async (projectId) => registry.get(projectId));
     if (action === "once") { console.log(JSON.stringify(await worker.runOnce(), null, 2)); return; }
     await worker.start();
     return;
@@ -182,7 +178,10 @@ async function main() {
       },
     });
 
-    if (action === "enqueue") {\n      const mission = rest.join(" "); if (!mission) usage();\n      console.log(JSON.stringify(await workflows.create(projectId, mission), null, 2)); return;\n    }\n    if (action === "start") {
+    if (action === "enqueue") {
+      const mission = rest.join(" "); if (!mission) usage();
+      console.log(JSON.stringify(await workflows.create(projectId, mission), null, 2)); return;
+    }\n    if (action === "start") {
       const mission = rest.join(" "); if (!mission) usage();
       const workflow = await workflows.create(projectId, mission);
       console.log(JSON.stringify(await runner.start(project, workflow), null, 2));
