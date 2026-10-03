@@ -5,6 +5,7 @@ import { EvidenceStore } from "./evidence-store.js";
 import { buildVerificationReport } from "./verification.js";
 import { HttpVerifier, type HttpVerificationOptions } from "./http-verifier.js";
 import { BrowserVerifier, type BrowserVerificationOptions } from "./browser-verifier.js";
+import { ServiceRunner, type ServiceStartOptions } from "./service-runner.js";
 
 async function packageJson(project: Project): Promise<Record<string, unknown> | null> {
   try {
@@ -93,6 +94,29 @@ export class VerificationRunner {
 
   async verifyBrowser(project: Project, workflowId: string, url: string, options: BrowserVerificationOptions = {}) {
     return new BrowserVerifier(this.evidence).verify(project, workflowId, url, options);
+  }
+
+  async verifyService(
+    project: Project,
+    workflowId: string,
+    service: ServiceStartOptions,
+    browserUrl?: string,
+    browser?: BrowserVerificationOptions,
+  ) {
+    const runner = new ServiceRunner();
+    const results: Evidence[] = [];
+    await runner.runAndVerify(project, service, async () => {
+      if (service.readyUrl) {
+        results.push(await this.verifyHttp(project, workflowId, service.readyUrl));
+      }
+      if (browserUrl) {
+        results.push(await this.verifyBrowser(project, workflowId, browserUrl, browser));
+      }
+      if (results.some((item) => !item.passed)) {
+        throw new Error("Service verification failed.");
+      }
+    });
+    return results;
   }
 
   async report(projectId: string, workflowId: string) {
