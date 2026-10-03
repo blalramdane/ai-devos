@@ -10,7 +10,7 @@ test("http verifier records passing evidence for localhost", async () => {
     res.writeHead(200, { "content-type": "text/plain" });
     res.end("AI DevOS health ok");
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   assert.ok(address && typeof address !== "string");
   const root = ".tmp-http-verifier";
