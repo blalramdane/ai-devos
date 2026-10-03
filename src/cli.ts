@@ -22,6 +22,10 @@ Commands:
   skills <mission>
   models
   policy <mission>
+  context <projectId>
+  memory <projectId> [query]
+  remember <projectId> <category> <content>
+  tasks <projectId>
   run <projectId> <mission>
 `);
   process.exit(1);
@@ -89,6 +93,10 @@ async function main() {
     return;
   }
 
+  if (command === "context") { const [id]=args;if(!id)usage();const {ProjectContextStore}=await import("./project-context.js");console.log(JSON.stringify(await new ProjectContextStore(config.dataDir).get(id),null,2));return; }
+  if (command === "memory") { const [id,...q]=args;if(!id)usage();const {FileMemoryStore}=await import("./memory.js");const s=new FileMemoryStore(config.dataDir);console.log(JSON.stringify(q.length?await s.search(id,q.join(" ")):await s.latest(id),null,2));return; }
+  if (command === "remember") { const [id,category,...cc]=args;if(!id||!category||!cc.length)usage();const {FileMemoryStore}=await import("./memory.js");await new FileMemoryStore(config.dataDir).add({id:"memory-"+Date.now().toString(36),projectId:id,category:category as any,content:cc.join(" "),createdAt:new Date().toISOString()});return; }
+  if (command === "tasks") { const [id]=args;if(!id)usage();const {TaskStore}=await import("./tasks.js");console.table(await new TaskStore(config.dataDir).list(id));return; }
   if (command === "run") {
     const [projectId, ...missionParts] = args;
     if (!projectId || missionParts.length === 0) usage();
