@@ -52,3 +52,14 @@ See `docs/architecture.md` and `docs/local-agent.md`.
 7. Rich memory/retrieval
 8. Budgets, routing policies, and model evaluation
 
+
+
+### Verification
+
+The runtime persists verification evidence for tests, Git state, HTTP endpoints, and browser checks. Local HTTP/browser checks are the default trust boundary; external URL verification requires explicit opt-in.
+
+```bash
+aidevos workflow verify-http <projectId> <workflowId> http://127.0.0.1:3000/health 200 "ok"
+aidevos workflow verify-browser <projectId> <workflowId> http://127.0.0.1:3000 "#app" "Dashboard"
+aidevos workflow evidence <projectId> <workflowId>
+```
