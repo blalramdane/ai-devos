@@ -25,6 +25,7 @@ AI DevOS is an execution-oriented development environment that combines project 
 - Task-aware ModelRouter with ordered fallback routes
 - Ollama-first local configuration with Experiential Labs support
 - CLI-first execution runtime
+- Persistent workflow engine with stage checkpoints, retries, pause/resume, append-only events, and approval gates
 
 ## Quick start
 
