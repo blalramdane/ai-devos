@@ -10,6 +10,8 @@ import { EventStore } from "./events.js";
 import { ApprovalStore } from "./approvals.js";
 import { WorkflowStore } from "./workflows.js";
 import { WorkflowRunner } from "./workflow-runner.js";
+import { EvidenceStore } from "./evidence-store.js";
+import { VerificationRunner } from "./verification-runner.js";
 
 const config = loadConfig();
 const registry = new ProjectRegistry(config.dataDir);
@@ -114,6 +116,8 @@ async function main() {
     const workflows = new WorkflowStore(config.dataDir);
     const events = new EventStore(config.dataDir);
     const approvals = new ApprovalStore(config.dataDir);
+    const evidence = new EvidenceStore(config.dataDir);
+    const verification = new VerificationRunner(evidence);
     const runner = new WorkflowRunner(workflows, events, approvals, {
       handlers: {
         understand: async ({ project }) => JSON.stringify(await auditProject(project)),
@@ -123,8 +127,9 @@ async function main() {
           return JSON.stringify({ route: decision.route.id, reason: decision.reason, skills: routeSkills(workflow.mission).map((skill) => skill.name) });
         },
         execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
-        test: async () => "Agent execution includes task-scoped test/build verification; dedicated verification runners remain extensible.",
-        verify: async () => "Workflow checkpoint recorded; inspect git diff/status and agent evidence before treating external effects as complete.",
+        test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
+        verify: async ({ project, workflow }) => JSON.stringify(await verification.verifyGit(project, workflow.id)),
+
         finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
       },
     });
@@ -152,6 +157,10 @@ async function main() {
       const approval = await approvals.update(projectId, approvalId, "approved");
       await events.append({ type: "workflow.approval.granted", workflowId: approval.workflowId, projectId, payload: { approvalId } });
       console.log(JSON.stringify(approval, null, 2)); return;
+    }
+    if (action === "evidence") {
+      const [workflowId] = rest; if (!workflowId) usage();
+      console.log(JSON.stringify(await verification.report(projectId, workflowId), null, 2)); return;
     }
     if (action === "events") {
       const [workflowId] = rest; if (!workflowId) usage();
