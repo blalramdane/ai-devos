@@ -3,3 +3,7 @@ export * from "./memory.js";
 export * from "./policy.js";
 export * from "./runner.js";
 export * from "./verification.js";
+export * from "./config.js";
+export * from "./projects.js";
+export * from "./skills.js";
+export * from "./audit.js";
