@@ -128,7 +128,7 @@ async function main() {
     const events = new EventStore(config.dataDir);
     const approvals = new ApprovalStore(config.dataDir);
     const evidence = new EvidenceStore(config.dataDir);
-    const verification = new VerificationRunner(evidence);
+    const verification = new VerificationRunner(evidence, config.dataDir);
     const lock = new WorkflowLock(config.dataDir);
     const workerRunner = new WorkflowRunner(workflows, events, approvals, {
       handlers: {
@@ -140,7 +140,7 @@ async function main() {
         },
         execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
         test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
-        verify: async ({ project, workflow }) => JSON.stringify(await verification.verifyGit(project, workflow.id)),
+        verify: async ({ project, workflow }) => JSON.stringify([...(await verification.verifyConfigured(project, workflow.id)), ...(await verification.verifyGit(project, workflow.id))]),
         finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
       },
     });
@@ -161,7 +161,7 @@ async function main() {
     const events = new EventStore(config.dataDir);
     const approvals = new ApprovalStore(config.dataDir);
     const evidence = new EvidenceStore(config.dataDir);
-    const verification = new VerificationRunner(evidence);
+    const verification = new VerificationRunner(evidence, config.dataDir);
     const runner = new WorkflowRunner(workflows, events, approvals, {
       handlers: {
         understand: async ({ project }) => JSON.stringify(await auditProject(project)),
