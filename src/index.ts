@@ -23,3 +23,5 @@ export * from "./workflow-lock.js";
 
 export * from "./http-verifier.js";
 export * from "./browser-verifier.js";
+
+export * from "./service-runner.js";
