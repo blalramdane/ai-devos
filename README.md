@@ -11,18 +11,39 @@ AI DevOS is an execution-oriented development environment that combines project 
 - Treat tests and runtime evidence as part of completion.
 - Keep project knowledge separate from global knowledge.
 - Make execution boundaries explicit and auditable.
+- Keep the model provider replaceable.
 
-## V1
+## Current V1 foundation
 
-V1 focuses on the foundation:
+- Workspace/project registry
+- Persistent project memory primitives
+- Agent task state model
+- Safety-aware command policy
+- Local filesystem/search/edit tools
+- Git status/diff verification tools
+- OpenAI-compatible model routing
+- Ollama-first local configuration
+- CLI-first execution runtime
 
-- Workspace and project model
-- Persistent project memory
-- Agent task state
-- Tool gateway abstractions
-- Command execution with safety boundaries
-- Test/verification result model
-- Git-aware task history
-- CLI-first runtime with an API/UI layer ready to follow
+## Quick start
 
-See [docs/architecture.md](docs/architecture.md) for the initial architecture.
+1. Install dependencies with `npm install`.
+2. Copy `.env.example` to `.env`.
+3. Run `npm run build`.
+4. Register a project with `node dist/cli.js register <id> <name> <rootPath> [description]`.
+5. List projects with `node dist/cli.js projects`.
+6. Run a mission with `node dist/cli.js run <projectId> <mission>`.
+
+See `docs/architecture.md` and `docs/local-agent.md`.
+
+## Roadmap
+
+1. Local execution MVP
+2. Project audit and skill router
+3. Approval and event UI
+4. Docker sandbox
+5. Browser verification
+6. GitHub PR workflow
+7. Rich memory/retrieval
+8. Model-aware routing, budgets, and evaluation
+
