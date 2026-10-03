@@ -53,7 +53,7 @@ export class ModelRouter {
     return [...this.routes].sort((a, b) => a.priority - b.priority);
   }
 
-  catalog(): ModelCatalogEntry[] {
+  getCatalog(): ModelCatalogEntry[] {
     return [...this.catalog];
   }
 
