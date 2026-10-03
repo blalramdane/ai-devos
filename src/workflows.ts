@@ -50,7 +50,13 @@ export class WorkflowStore {
 
   async projects(): Promise<string[]> {
     const { readdir } = await import("node:fs/promises");
-    try { return await readdir(this.rootDir); } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
+    try {
+      const entries = await readdir(this.rootDir, { withFileTypes: true });
+      return entries.filter((entry) => entry.isDirectory() && entry.name !== "locks").map((entry) => entry.name);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
   }
 
   async get(projectId: string, workflowId: string) {
@@ -62,7 +68,7 @@ export class WorkflowStore {
   async create(projectId: string, mission: string, stages = DEFAULT_WORKFLOW_STAGES) {
     const now = new Date().toISOString();
     const workflow: WorkflowRun = {
-      id: "wf-" + Date.now().toString(36),
+      id: "wf-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
       projectId,
       mission,
       status: "queued",
