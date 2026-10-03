@@ -48,7 +48,7 @@ export class WorkflowStore {
     }
   }
 
-  async get(projectId: string, workflowId: string) {
+  async projects(): Promise<string[]> {\n    const { readdir } = await import("node:fs/promises");\n    try { return await readdir(this.rootDir); } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }\n  }\n\n  async get(projectId: string, workflowId: string) {
     const item = (await this.list(projectId)).find((workflow) => workflow.id === workflowId);
     if (!item) throw new Error("Unknown workflow: " + workflowId);
     return item;
