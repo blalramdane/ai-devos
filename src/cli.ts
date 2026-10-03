@@ -72,10 +72,19 @@ function createWorkflowRunner(
       },
       execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
       test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
-      verify: async ({ project, workflow }) => JSON.stringify([
-        ...(await verification.verifyConfigured(project, workflow.id)),
-        ...(await verification.verifyGit(project, workflow.id)),
-      ]),
+      verify: async ({ project, workflow }) => {
+        const items = [
+          ...(await verification.verifyConfigured(project, workflow.id)),
+          ...(await verification.verifyGit(project, workflow.id)),
+        ];
+        const report = await verification.report(project.id, workflow.id);
+        if (!report.verified) {
+          throw new Error(
+            `Verification failed: ${report.requiredFailures} required evidence item(s) failed; ${report.notApplicable} item(s) were not applicable.`,
+          );
+        }
+        return JSON.stringify(report);
+      },
       finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
     },
     recoveryHandlers: {
