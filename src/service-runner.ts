@@ -50,7 +50,16 @@ export class ServiceRunner {
     return this.handle(child, options.command);
   }
 
-  private handle(child: ChildProcess, command: string): ServiceHandle {
+  async runAndVerify(project: Project, options: ServiceStartOptions, verify: (handle: ServiceHandle) => Promise<void>) {
+    const handle = await this.start(project, options);
+    try {
+      await verify(handle);
+    } finally {
+      await handle.stop();
+    }
+  }
+
+  private handle(child: ChildProcess, command: string) {
     return { pid: child.pid!, command, stop: async () => this.stopProcess(child) };
   }
 
