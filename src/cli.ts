@@ -205,6 +205,28 @@ async function main() {
       await events.append({ type: "workflow.approval.granted", workflowId: approval.workflowId, projectId, payload: { approvalId } });
       console.log(JSON.stringify(approval, null, 2)); return;
     }
+    if (action === "verify-http") {
+      const [workflowId, url, expectedStatusRaw, ...containsParts] = rest;
+      if (!workflowId || !url) usage();
+      const expectedStatus = expectedStatusRaw ? Number(expectedStatusRaw) : 200;
+      if (!Number.isInteger(expectedStatus) || expectedStatus < 100 || expectedStatus > 599) usage();
+      const item = await verification.verifyHttp(project, workflowId, url, {
+        expectedStatus,
+        contains: containsParts.length ? containsParts.join(" ") : undefined,
+      });
+      console.log(JSON.stringify(item, null, 2));
+      return;
+    }
+    if (action === "verify-browser") {
+      const [workflowId, url, selector, ...containsParts] = rest;
+      if (!workflowId || !url) usage();
+      const item = await verification.verifyBrowser(project, workflowId, url, {
+        selector,
+        contains: containsParts.length ? containsParts.join(" ") : undefined,
+      });
+      console.log(JSON.stringify(item, null, 2));
+      return;
+    }
     if (action === "evidence") {
       const [workflowId] = rest; if (!workflowId) usage();
       console.log(JSON.stringify(await verification.report(projectId, workflowId), null, 2)); return;
