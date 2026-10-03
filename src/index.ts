@@ -9,3 +9,4 @@ export * from "./skills.js";
 export * from "./audit.js";
 export * from "./model-router.js";
 export * from "./model-catalog.js";
+export * from "./model-policy.js";
