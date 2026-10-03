@@ -22,7 +22,8 @@ AI DevOS is an execution-oriented development environment that combines project 
 - Local filesystem/search/edit tools
 - Git status/diff verification tools
 - OpenAI-compatible model routing
-- Ollama-first local configuration
+- Task-aware ModelRouter with ordered fallback routes
+- Ollama-first local configuration with Experiential Labs support
 - CLI-first execution runtime
 
 ## Quick start
@@ -32,7 +33,10 @@ AI DevOS is an execution-oriented development environment that combines project 
 3. Run `npm run build`.
 4. Register a project with `node dist/cli.js register <id> <name> <rootPath> [description]`.
 5. List projects with `node dist/cli.js projects`.
-6. Run a mission with `node dist/cli.js run <projectId> <mission>`.
+6. Inspect configured model routes with `node dist/cli.js models`.
+7. Run a mission with `node dist/cli.js run <projectId> <mission>`.
+
+For Experiential Labs, set `AIDEVOS_PROVIDER=experiential`, `AIDEVOS_BASE_URL=https://api.experientiallabs.ai/v1`, `AIDEVOS_API_KEY` to your gateway key, and `AIDEVOS_MODEL` to a callable model slug. You can also keep Ollama as primary and add Experiential as a tagged fallback through `AIDEVOS_FALLBACKS`.
 
 See `docs/architecture.md` and `docs/local-agent.md`.
 
@@ -45,5 +49,5 @@ See `docs/architecture.md` and `docs/local-agent.md`.
 5. Browser verification
 6. GitHub PR workflow
 7. Rich memory/retrieval
-8. Model-aware routing, budgets, and evaluation
+8. Budgets, routing policies, and model evaluation
 
