@@ -62,3 +62,16 @@ aidevos workflow evidence my-project wf-123
 ```
 
 Browser verification requires a Playwright browser binary to be installed in the execution environment. The adapter records a failed evidence item instead of hiding launch/navigation errors.
+
+
+### Project-context verification
+
+A project's `verificationRequirements` can drive the Verify stage automatically. Requirements use a deterministic pipe-delimited format:
+
+- `http|URL|expectedStatus|contains`
+- `browser|URL|selector|contains`
+- `service|command|readyUrl|browserUrl|selector|contains`
+
+Only the fields required by the selected verifier are needed. Local HTTP/browser verification is the default; external URLs remain blocked unless explicitly enabled by the verifier API. Service startup also passes through the command risk policy, so high/critical startup commands require explicit approval.
+
+The workflow Verify stage runs these configured checks before the final Git evidence check. A failed verification is persisted as evidence and causes the workflow stage to fail rather than claiming completion.
