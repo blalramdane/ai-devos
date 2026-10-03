@@ -8,3 +8,4 @@ export * from "./projects.js";
 export * from "./skills.js";
 export * from "./audit.js";
 export * from "./model-router.js";
+export * from "./model-catalog.js";
