@@ -4,6 +4,9 @@ import type { DevOSConfig } from "./config.js";
 import { createProjectTools, type AgentContext } from "./toolkit.js";
 import { routeSkills } from "./skills.js";
 import { createModelRouter } from "./model-router.js";
+import { FileMemoryStore } from "./memory.js";
+import { ProjectContextStore } from "./project-context.js";
+import { TaskStore } from "./tasks.js";
 
 const CORE_INSTRUCTIONS = `
 You are AI DevOS, a local-first software engineering operating system.
@@ -55,7 +58,15 @@ export async function runMission(project: Project, mission: string, config: DevO
   setOpenAIAPI("chat_completions");
 
   const router = await createModelRouter(config);
-  const route = router.primary(mission);
+  const decision = router.policy(mission, config.modelPolicy);
+  const route = decision.route;
+  const memoryStore = new FileMemoryStore(config.dataDir);
+  const contextStore = new ProjectContextStore(config.dataDir);
+  const taskStore = new TaskStore(config.dataDir);
+  const task = await taskStore.create(project.id, mission);
+  await taskStore.update(project.id, task.id, "executing");
+  const projectContext = await contextStore.get(project.id);
+  const relevantMemory = await memoryStore.search(project.id, mission, 8);
 
   const provider = new OpenAIProvider({
     apiKey: route.apiKey,
@@ -71,7 +82,7 @@ export async function runMission(project: Project, mission: string, config: DevO
   const agent = new Agent<AgentContext>({
     name: "AI DevOS Engineer",
     model,
-    instructions: `${CORE_INSTRUCTIONS}\n\nACTIVE PROJECT\nName: ${project.name}\nRoot: ${project.rootPath}\nDescription: ${project.description ?? "No description supplied."}\n\nMODEL ROUTE\nProvider: ${route.provider}\nModel: ${route.model}\nBase URL: ${route.baseUrl}\n\nROUTED SKILLS\n${skillContext}\n\nBefore making changes, inspect the project. Prefer evidence from the repository over assumptions.`,
+    instructions: `${CORE_INSTRUCTIONS}\n\nACTIVE PROJECT\nName: ${project.name}\nRoot: ${project.rootPath}\nDescription: ${project.description ?? "No description supplied."}\n\nMODEL ROUTE\nProvider: ${route.provider}\nModel: ${route.model}\nBase URL: ${route.baseUrl}\n\nPROJECT CONTEXT\n${JSON.stringify(projectContext, null, 2)}\n\nRELEVANT MEMORY\n${JSON.stringify(relevantMemory, null, 2)}\n\nROUTED SKILLS\n${skillContext}\n\nPOLICY\n${JSON.stringify(decision.reason)}\n\nBefore making changes, inspect the project. Prefer evidence from the repository over assumptions.`,
     tools,
   });
 
@@ -81,5 +92,7 @@ export async function runMission(project: Project, mission: string, config: DevO
     maxTurns: config.maxTurns,
   });
 
+  await taskStore.update(project.id, task.id, "completed");
+  await memoryStore.add({id:"memory-"+Date.now().toString(36),projectId:project.id,category:"lesson",content:result.finalOutput.slice(0,12000),createdAt:new Date().toISOString(),sourceTaskId:task.id});
   return result.finalOutput;
 }
