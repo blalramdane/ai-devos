@@ -8,7 +8,7 @@ test("service runner starts a local service and waits for readiness", async () =
   await writeFile("service-fixture.mjs", [
     'import { createServer } from "node:http";',
     'const server = createServer((_req,res)=>{res.writeHead(200,{"content-type":"text/plain"});res.end("ready");});',
-    \`server.listen(\${port},"127.0.0.1");\`,
+    `server.listen(${port},"127.0.0.1");`,
   ].join("\n"));
   const runner = new ServiceRunner();
   const handle = await runner.start(
