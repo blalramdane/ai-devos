@@ -35,11 +35,14 @@ export type EvidenceKind =
   | "git"
   | "command";
 
+export type EvidenceStatus = "passed" | "failed" | "not_applicable";
+
 export interface Evidence {
   id: string;
   kind: EvidenceKind;
   title: string;
   passed: boolean;
+  status?: EvidenceStatus;
   summary: string;
   command?: string;
   exitCode?: number;
@@ -50,5 +53,7 @@ export interface VerificationReport {
   taskId: string;
   verified: boolean;
   evidence: Evidence[];
+  requiredFailures: number;
+  notApplicable: number;
   generatedAt: string;
 }
