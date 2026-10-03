@@ -6,6 +6,7 @@ import { buildVerificationReport } from "./verification.js";
 import { HttpVerifier, type HttpVerificationOptions } from "./http-verifier.js";
 import { BrowserVerifier, type BrowserVerificationOptions } from "./browser-verifier.js";
 import { ServiceRunner, type ServiceStartOptions } from "./service-runner.js";
+import { ProjectContextStore } from "./project-context.js";
 
 async function packageJson(project: Project): Promise<Record<string, unknown> | null> {
   try {
@@ -21,7 +22,7 @@ function hasScript(pkg: Record<string, unknown> | null, name: string) {
 }
 
 export class VerificationRunner {
-  constructor(private readonly evidence: EvidenceStore) {}
+  constructor(private readonly evidence: EvidenceStore, private readonly dataDir?: string) {}
 
   async runTests(project: Project, workflowId: string): Promise<Evidence[]> {
     const pkg = await packageJson(project);
@@ -94,6 +95,56 @@ export class VerificationRunner {
 
   async verifyBrowser(project: Project, workflowId: string, url: string, options: BrowserVerificationOptions = {}) {
     return new BrowserVerifier(this.evidence).verify(project, workflowId, url, options);
+  }
+
+  async verifyConfigured(project: Project, workflowId: string): Promise<Evidence[]> {
+    if (!this.dataDir) return [];
+    const context = await new ProjectContextStore(this.dataDir).get(project.id);
+    const requirements = context.verificationRequirements ?? [];
+    const results: Evidence[] = [];
+
+    for (const requirement of requirements) {
+      const parts = requirement.split("|");
+      const kind = parts[0]?.trim().toLowerCase();
+      if (kind === "http") {
+        const url = parts[1]?.trim();
+        if (!url) throw new Error("Invalid http verification requirement: " + requirement);
+        const expectedStatus = parts[2] ? Number(parts[2]) : 200;
+        results.push(await this.verifyHttp(project, workflowId, url, {
+          expectedStatus: Number.isInteger(expectedStatus) ? expectedStatus : 200,
+          contains: parts[3]?.trim() || undefined,
+        }));
+        continue;
+      }
+      if (kind === "browser") {
+        const url = parts[1]?.trim();
+        if (!url) throw new Error("Invalid browser verification requirement: " + requirement);
+        results.push(await this.verifyBrowser(project, workflowId, url, {
+          selector: parts[2]?.trim() || undefined,
+          contains: parts[3]?.trim() || undefined,
+        }));
+        continue;
+      }
+      if (kind === "service") {
+        const command = parts[1]?.trim();
+        const readyUrl = parts[2]?.trim();
+        if (!command || !readyUrl) throw new Error("Invalid service verification requirement: " + requirement);
+        results.push(...await this.verifyService(
+          project,
+          workflowId,
+          { command, readyUrl },
+          parts[3]?.trim() || undefined,
+          {
+            selector: parts[4]?.trim() || undefined,
+            contains: parts[5]?.trim() || undefined,
+          },
+        ));
+        continue;
+      }
+      throw new Error("Unknown verification requirement: " + requirement);
+    }
+
+    return results;
   }
 
   async verifyService(
