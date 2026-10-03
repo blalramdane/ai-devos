@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { loadConfig } from "./config.js";
 import { ProjectRegistry } from "./projects.js";
 import { runMission } from "./agent.js";
+import { auditProject } from "./audit.js";
+import { routeSkills } from "./skills.js";
 
 const config = loadConfig();
 const registry = new ProjectRegistry(config.dataDir);
@@ -16,6 +17,8 @@ AI DevOS
 Commands:
   register <id> <name> <rootPath> [description]
   projects
+  audit <projectId>
+  skills <mission>
   run <projectId> <mission>
 `);
   process.exit(1);
@@ -39,6 +42,21 @@ async function main() {
 
   if (command === "projects") {
     console.table(await registry.list());
+    return;
+  }
+
+  if (command === "audit") {
+    const [projectId] = args;
+    if (!projectId) usage();
+    const project = await registry.get(projectId);
+    console.log(JSON.stringify(await auditProject(project), null, 2));
+    return;
+  }
+
+  if (command === "skills") {
+    const mission = args.join(" ");
+    if (!mission) usage();
+    console.table(routeSkills(mission).map((skill) => ({ name: skill.name })));
     return;
   }
 
