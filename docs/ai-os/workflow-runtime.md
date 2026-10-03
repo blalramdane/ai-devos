@@ -23,6 +23,8 @@ Stage handlers are injectable so future runtimes can replace the current CLI han
 
 Events are appended to .aidevos/<projectId>/events.jsonl. V1 keeps this local and append-only.
 
+Verification evidence is persisted under .aidevos/<projectId>/workflows/<workflowId>/evidence.json. The verification runner discovers npm check/test scripts, records exit codes and output, and records Git status/diff evidence.
+
 ## Approval gates
 
 High/critical actions can create an approval request. The workflow moves to waiting_approval until the request is explicitly approved. Approval state is persisted in .aidevos/<projectId>/approvals.json.
@@ -35,6 +37,7 @@ High/critical actions can create an approval request. The workflow moves to wait
     aidevos workflow pause <projectId> <workflowId>
     aidevos workflow approve <projectId> <approvalId>
     aidevos workflow events <projectId> <workflowId>
+    aidevos workflow evidence <projectId> <workflowId>
     aidevos approvals <projectId>
 
 ## Design boundary
