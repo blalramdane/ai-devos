@@ -12,3 +12,7 @@ export * from "./model-catalog.js";
 export * from "./model-policy.js";
 export * from "./project-context.js";
 export * from "./tasks.js";
+export * from "./events.js";
+export * from "./approvals.js";
+export * from "./workflows.js";
+export * from "./workflow-runner.js";
