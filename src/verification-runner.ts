@@ -3,6 +3,8 @@ import { runCommand } from "./runner.js";
 import type { Evidence, Project } from "./domain.js";
 import { EvidenceStore } from "./evidence-store.js";
 import { buildVerificationReport } from "./verification.js";
+import { HttpVerifier, type HttpVerificationOptions } from "./http-verifier.js";
+import { BrowserVerifier, type BrowserVerificationOptions } from "./browser-verifier.js";
 
 async function packageJson(project: Project): Promise<Record<string, unknown> | null> {
   try {
@@ -83,6 +85,14 @@ export class VerificationRunner {
     ];
     for (const item of items) await this.evidence.add(project.id, workflowId, item);
     return items;
+  }
+
+  async verifyHttp(project: Project, workflowId: string, url: string, options: HttpVerificationOptions = {}) {
+    return new HttpVerifier(this.evidence).verify(project, workflowId, url, options);
+  }
+
+  async verifyBrowser(project: Project, workflowId: string, url: string, options: BrowserVerificationOptions = {}) {
+    return new BrowserVerifier(this.evidence).verify(project, workflowId, url, options);
   }
 
   async report(projectId: string, workflowId: string) {
