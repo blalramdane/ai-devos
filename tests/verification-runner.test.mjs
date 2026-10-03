@@ -69,3 +69,18 @@ test("nested project inside a Git repository is not treated as a Git project roo
   assert.equal(items[0].status, "not_applicable");
   assert.equal(items[1].status, "not_applicable");
 });
+
+
+test("verification report uses the latest result when a workflow retries the same check", async () => {
+  const { buildVerificationReport } = await import("../dist/verification.js");
+  const evidence = [
+    { id: "failed", kind: "test", title: "npm run test", passed: false, status: "failed", command: "npm run test" },
+    { id: "passed", kind: "test", title: "npm run test", passed: true, status: "passed", command: "npm run test" },
+    { id: "na", kind: "git", title: "Git status", passed: false, status: "not_applicable", command: "git status --short --branch" },
+  ];
+  const report = buildVerificationReport("wf-retry-report", evidence);
+  assert.equal(report.verified, true);
+  assert.equal(report.requiredFailures, 0);
+  assert.equal(report.evidence.length, 2);
+  assert.equal(report.evidence.find((item) => item.kind === "test")?.status, "passed");
+});
