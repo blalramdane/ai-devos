@@ -144,6 +144,16 @@ async function main() {
         finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
       },
     });
+        recoveryHandlers: {
+          test: async ({ project, workflow, stage }) => {
+            const evidence = await verification.report(project.id, workflow.id);
+            return runMission(project, `A workflow test stage failed for mission: "${workflow.mission}". Inspect the repository and latest evidence, identify the root cause, make the smallest safe fix, and test it. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
+          },
+          verify: async ({ project, workflow, stage }) => {
+            const evidence = await verification.report(project.id, workflow.id);
+            return runMission(project, `A workflow verification stage failed for mission: "${workflow.mission}". Reproduce the failure, inspect the evidence, determine the root cause, make the smallest safe fix, and leave the project verifiable. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
+          },
+        },
     const worker = new WorkflowWorker(workflows, {
       async start(project, workflow) { const release = await lock.acquire(workflow.id); try { return await workerRunner.start(project, workflow); } finally { await release(); } },
       async resume(project, workflowId) { const release = await lock.acquire(workflowId); try { return await workerRunner.resume(project, workflowId); } finally { await release(); } },
@@ -177,6 +187,16 @@ async function main() {
         finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
       },
     });
+        recoveryHandlers: {
+          test: async ({ project, workflow, stage }) => {
+            const evidence = await verification.report(project.id, workflow.id);
+            return runMission(project, `A workflow test stage failed for mission: "${workflow.mission}". Inspect the repository and latest evidence, identify the root cause, make the smallest safe fix, and test it. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
+          },
+          verify: async ({ project, workflow, stage }) => {
+            const evidence = await verification.report(project.id, workflow.id);
+            return runMission(project, `A workflow verification stage failed for mission: "${workflow.mission}". Reproduce the failure, inspect the evidence, determine the root cause, make the smallest safe fix, and leave the project verifiable. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
+          },
+        },
 
     if (action === "enqueue") {
       const mission = rest.join(" "); if (!mission) usage();
