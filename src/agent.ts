@@ -54,7 +54,7 @@ Next Step
 export async function runMission(project: Project, mission: string, config: DevOSConfig): Promise<string> {
   setOpenAIAPI("chat_completions");
 
-  const router = createModelRouter(config);
+  const router = await createModelRouter(config);
   const route = router.primary(mission);
 
   const provider = new OpenAIProvider({
