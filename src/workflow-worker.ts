@@ -32,12 +32,10 @@ export class WorkflowWorker {
     for (const projectId of projectIds) {
       const items = await this.workflows.list(projectId);
       for (const workflow of items) {
-        if (workflow.status !== "queued" && workflow.status !== "paused" && workflow.status !== "failed") continue;
+        if (workflow.status !== "queued") continue;
         const project = await this.resolveProject(projectId);
         try {
-          const result = workflow.status === "queued"
-            ? await this.runner.start(project, workflow)
-            : await this.runner.resume(project, workflow.id);
+          const result = await this.runner.start(project, workflow);
           processed.push(result);
         } catch {
           // Approval waits and transient failures remain persisted for the next tick.
