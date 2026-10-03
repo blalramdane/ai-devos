@@ -1,7 +1,16 @@
 import type { Evidence, VerificationReport } from "./domain.js";
 
+function latestEvidence(evidence: Evidence[]) {
+  const latest = new Map<string, Evidence>();
+  for (const item of evidence) {
+    const key = [item.kind, item.title, item.command ?? ""].join("|");
+    latest.set(key, item);
+  }
+  return [...latest.values()];
+}
+
 export function buildVerificationReport(taskId: string, evidence: Evidence[]): VerificationReport {
-  const normalized = evidence.map((item) => ({
+  const normalized = latestEvidence(evidence).map((item) => ({
     ...item,
     status: item.status ?? (item.passed ? "passed" : "failed"),
   }));
