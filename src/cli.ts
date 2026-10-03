@@ -181,7 +181,8 @@ async function main() {
     if (action === "enqueue") {
       const mission = rest.join(" "); if (!mission) usage();
       console.log(JSON.stringify(await workflows.create(projectId, mission), null, 2)); return;
-    }\n    if (action === "start") {
+    }
+    if (action === "start") {
       const mission = rest.join(" "); if (!mission) usage();
       const workflow = await workflows.create(projectId, mission);
       console.log(JSON.stringify(await runner.start(project, workflow), null, 2));
@@ -245,7 +246,10 @@ async function main() {
     const router = await createModelRouter(config);
     const decision = router.policy(missionParts.join(" "), config.modelPolicy);
     const route = decision.route;
-    console.log(`\n[AI DevOS] ${project.name}\n[Route] ${route.provider} / ${route.model}\n`);
+    console.log(`
+[AI DevOS] ${project.name}
+[Route] ${route.provider} / ${route.model}
+`);
     const output = await runMission(project, missionParts.join(" "), config);
     console.log(output);
     return;
