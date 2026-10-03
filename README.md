@@ -231,6 +231,7 @@ See:
 
 - `docs/architecture.md`
 - `docs/local-agent.md`
+- `docs/cli.md`
 - `docs/ai-os/agent-execution-protocol.md`
 - `docs/ai-os/tool-orchestration.md`
 - `docs/ai-os/project-context-model.md`
