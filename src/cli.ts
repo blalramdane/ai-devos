@@ -95,8 +95,8 @@ async function main() {
         priority: route.priority,
         tags: route.tags.join(", "),
         baseUrl: route.baseUrl,
-        tools: router.catalog().find((model) => model.id === route.model)?.supportsTools ?? "unknown",
-        context: router.catalog().find((model) => model.id === route.model)?.contextWindow ?? "unknown",
+        tools: router.getCatalog().find((model) => model.id === route.model)?.supportsTools ?? "unknown",
+        context: router.getCatalog().find((model) => model.id === route.model)?.contextWindow ?? "unknown",
       })),
     );
     return;
