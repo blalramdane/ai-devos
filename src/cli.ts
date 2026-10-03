@@ -52,6 +52,53 @@ Commands:
   process.exit(1);
 }
 
+function createWorkflowRunner(
+  workflows: WorkflowStore,
+  events: EventStore,
+  approvals: ApprovalStore,
+  verification: VerificationRunner,
+) {
+  return new WorkflowRunner(workflows, events, approvals, {
+    handlers: {
+      understand: async ({ project }) => JSON.stringify(await auditProject(project)),
+      plan: async ({ workflow }) => {
+        const router = await createModelRouter(config);
+        const decision = router.policy(workflow.mission, config.modelPolicy);
+        return JSON.stringify({
+          route: decision.route.id,
+          reason: decision.reason,
+          skills: routeSkills(workflow.mission).map((skill) => skill.name),
+        });
+      },
+      execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
+      test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
+      verify: async ({ project, workflow }) => JSON.stringify([
+        ...(await verification.verifyConfigured(project, workflow.id)),
+        ...(await verification.verifyGit(project, workflow.id)),
+      ]),
+      finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
+    },
+    recoveryHandlers: {
+      test: async ({ project, workflow, stage }) => {
+        const evidence = await verification.report(project.id, workflow.id);
+        return runMission(
+          project,
+          `A workflow test stage failed for mission: "${workflow.mission}". Inspect the repository and latest evidence, identify the root cause, make the smallest safe fix, and test it. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`,
+          config,
+        );
+      },
+      verify: async ({ project, workflow, stage }) => {
+        const evidence = await verification.report(project.id, workflow.id);
+        return runMission(
+          project,
+          `A workflow verification stage failed for mission: "${workflow.mission}". Reproduce the failure, inspect the evidence, determine the root cause, make the smallest safe fix, and leave the project verifiable. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`,
+          config,
+        );
+      },
+    },
+  });
+}
+
 async function main() {
   if (!command) usage();
 
@@ -133,30 +180,7 @@ async function main() {
     const evidence = new EvidenceStore(config.dataDir);
     const verification = new VerificationRunner(evidence, config.dataDir);
     const lock = new WorkflowLock(config.dataDir);
-    const workerRunner = new WorkflowRunner(workflows, events, approvals, {
-      handlers: {
-        understand: async ({ project }) => JSON.stringify(await auditProject(project)),
-        plan: async ({ workflow }) => {
-          const router = await createModelRouter(config);
-          const decision = router.policy(workflow.mission, config.modelPolicy);
-          return JSON.stringify({ route: decision.route.id, reason: decision.reason, skills: routeSkills(workflow.mission).map((skill) => skill.name) });
-        },
-        execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
-        test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
-        verify: async ({ project, workflow }) => JSON.stringify([...(await verification.verifyConfigured(project, workflow.id)), ...(await verification.verifyGit(project, workflow.id))]),
-        finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
-      },
-      recoveryHandlers: {
-        test: async ({ project, workflow, stage }) => {
-          const evidence = await verification.report(project.id, workflow.id);
-          return runMission(project, `A workflow test stage failed for mission: "${workflow.mission}". Inspect the repository and latest evidence, identify the root cause, make the smallest safe fix, and test it. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
-        },
-        verify: async ({ project, workflow, stage }) => {
-          const evidence = await verification.report(project.id, workflow.id);
-          return runMission(project, `A workflow verification stage failed for mission: "${workflow.mission}". Reproduce the failure, inspect the evidence, determine the root cause, make the smallest safe fix, and leave the project verifiable. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
-        },
-      },
-    });
+    const workerRunner = createWorkflowRunner(workflows, events, approvals, verification);
     const worker = new WorkflowWorker(workflows, {
       async start(project, workflow) { const release = await lock.acquire(workflow.id); try { return await workerRunner.start(project, workflow); } finally { await release(); } },
       async resume(project, workflowId) { const release = await lock.acquire(workflowId); try { return await workerRunner.resume(project, workflowId); } finally { await release(); } },
@@ -175,31 +199,7 @@ async function main() {
     const approvals = new ApprovalStore(config.dataDir);
     const evidence = new EvidenceStore(config.dataDir);
     const verification = new VerificationRunner(evidence, config.dataDir);
-    const runner = new WorkflowRunner(workflows, events, approvals, {
-      handlers: {
-        understand: async ({ project }) => JSON.stringify(await auditProject(project)),
-        plan: async ({ workflow }) => {
-          const router = await createModelRouter(config);
-          const decision = router.policy(workflow.mission, config.modelPolicy);
-          return JSON.stringify({ route: decision.route.id, reason: decision.reason, skills: routeSkills(workflow.mission).map((skill) => skill.name) });
-        },
-        execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
-        test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
-        verify: async ({ project, workflow }) => JSON.stringify([...(await verification.verifyConfigured(project, workflow.id)), ...(await verification.verifyGit(project, workflow.id))]),
-
-        finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
-      },
-      recoveryHandlers: {
-        test: async ({ project, workflow, stage }) => {
-          const evidence = await verification.report(project.id, workflow.id);
-          return runMission(project, `A workflow test stage failed for mission: "${workflow.mission}". Inspect the repository and latest evidence, identify the root cause, make the smallest safe fix, and test it. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
-        },
-        verify: async ({ project, workflow, stage }) => {
-          const evidence = await verification.report(project.id, workflow.id);
-          return runMission(project, `A workflow verification stage failed for mission: "${workflow.mission}". Reproduce the failure, inspect the evidence, determine the root cause, make the smallest safe fix, and leave the project verifiable. Failure: ${stage.error ?? "unknown"} Evidence: ${JSON.stringify(evidence)}`, config);
-        },
-      },
-    });
+    const runner = createWorkflowRunner(workflows, events, approvals, verification);
 
     if (action === "enqueue") {
       const mission = rest.join(" "); if (!mission) usage();
