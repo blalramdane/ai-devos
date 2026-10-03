@@ -90,8 +90,9 @@ export async function runMission(project: Project, mission: string, config: DevO
   try {
     const result = await run(agent, mission, { context, maxTurns: config.maxTurns });
     await taskStore.update(project.id, task.id, "completed");
-    await memoryStore.add({id:"memory-"+Date.now().toString(36),projectId:project.id,category:"lesson",content:result.finalOutput.slice(0,12000),createdAt:new Date().toISOString(),sourceTaskId:task.id});
-    return result.finalOutput;
+    const finalOutput = result.finalOutput ?? "";
+    await memoryStore.add({id:"memory-"+Date.now().toString(36),projectId:project.id,category:"lesson",content:finalOutput.slice(0,12000),createdAt:new Date().toISOString(),sourceTaskId:task.id});
+    return finalOutput;
   } catch (error) {
     await taskStore.update(project.id, task.id, "failed");
     throw error;
