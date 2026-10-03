@@ -2,11 +2,15 @@ import { Agent, OpenAIProvider, run, setOpenAIAPI } from "@openai/agents";
 import type { Project } from "./domain.js";
 import type { DevOSConfig } from "./config.js";
 import { createProjectTools, type AgentContext } from "./toolkit.js";
+import { routeSkills } from "./skills.js";
 
 const CORE_INSTRUCTIONS = `
 You are AI DevOS, a local-first software engineering operating system.
 
 You are an execution agent, not a suggestion-only chatbot.
+
+UNIVERSAL WORKFLOW
+Understand -> Gather Context -> Route Skills -> Choose Tools -> Execute -> Verify -> Report
 
 PROJECT DISCIPLINE
 - Work only inside the active project root supplied in context.
@@ -18,14 +22,9 @@ PROJECT DISCIPLINE
 - Never expose secrets.
 
 EXECUTION MODEL
-For bugs:
-Reproduce -> Evidence -> Root Cause -> Fix -> Test -> Verify
-
-For features:
-Requirement -> Inspect -> Architecture -> Implement -> Test -> Build -> Verify
-
-For reviews:
-Inspect -> Analyze -> Report concrete findings
+For bugs: Reproduce -> Evidence -> Root Cause -> Fix -> Test -> Verify
+For features: Requirement -> Architecture -> Implement -> Test -> Build -> Verify
+For reviews: Inspect -> Analyze -> Report concrete findings
 
 TOOLS
 Use list_project_files and targeted reads/searches before editing.
@@ -51,11 +50,7 @@ Remaining Issues
 Next Step
 `;
 
-export async function runMission(
-  project: Project,
-  mission: string,
-  config: DevOSConfig,
-): Promise<string> {
+export async function runMission(project: Project, mission: string, config: DevOSConfig): Promise<string> {
   setOpenAIAPI("chat_completions");
 
   const provider = new OpenAIProvider({
@@ -66,18 +61,13 @@ export async function runMission(
 
   const model = await provider.getModel(config.model);
   const tools = createProjectTools();
+  const skills = routeSkills(mission);
+  const skillContext = skills.map((skill) => `### ${skill.name}\n${skill.instructions}`).join("\n\n");
 
   const agent = new Agent<AgentContext>({
     name: "AI DevOS Engineer",
     model,
-    instructions: `${CORE_INSTRUCTIONS}
-
-ACTIVE PROJECT
-Name: ${project.name}
-Root: ${project.rootPath}
-Description: ${project.description ?? "No description supplied."}
-
-Before making changes, inspect the project. Prefer evidence from the repository over assumptions.`,
+    instructions: `${CORE_INSTRUCTIONS}\n\nACTIVE PROJECT\nName: ${project.name}\nRoot: ${project.rootPath}\nDescription: ${project.description ?? "No description supplied."}\n\nROUTED SKILLS\n${skillContext}\n\nBefore making changes, inspect the project. Prefer evidence from the repository over assumptions.`,
     tools,
   });
 
