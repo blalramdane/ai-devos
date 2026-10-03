@@ -1,5 +1,6 @@
 import type { DevOSConfig, ModelRoute } from "./config.js";
 import { loadExperientialCatalog, type ModelCatalogEntry } from "./model-catalog.js";
+import { resolveModelPolicy, type ModelPolicyConfig, type ModelPolicyDecision } from "./model-policy.js";
 
 const ROUTING_HINTS: Record<string, string[]> = {
   engineering: ["code", "bug", "fix", "api", "architecture", "test", "build", "debug", "refactor", "deploy"],
@@ -54,6 +55,11 @@ export class ModelRouter {
 
   catalog(): ModelCatalogEntry[] {
     return [...this.catalog];
+  }
+
+  policy(mission: string, config: ModelPolicyConfig): ModelPolicyDecision {
+    const routes = this.resolve(mission);
+    return resolveModelPolicy(mission, config, routes, this.catalog);
   }
 }
 
