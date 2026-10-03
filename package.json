@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test",
     "check": "tsc --noEmit -p tsconfig.json",
-    "dev": "npm run build && node dist/cli.js"
+    "dev": "npm run build && node dist/cli.js",
+    "e2e:fixture": "node scripts/create-e2e-recovery-fixture.mjs"
   },
   "dependencies": {
     "@openai/agents": "^0.18.0",
