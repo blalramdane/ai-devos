@@ -1,13 +1,17 @@
 {
   "name": "@aidevos/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Core runtime for AI DevOS",
+  "description": "Local-first AI DevOS runtime",
   "type": "module",
+  "bin": {
+    "aidevos": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test",
-    "check": "tsc --noEmit -p tsconfig.json"
+    "check": "tsc --noEmit -p tsconfig.json",
+    "dev": "npm run build && node dist/cli.js"
   },
   "dependencies": {
     "@openai/agents": "^0.18.0",
@@ -19,3 +23,4 @@
     "typescript": "^5.0.0"
   }
 }
+
