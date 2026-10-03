@@ -16,3 +16,5 @@ export * from "./events.js";
 export * from "./approvals.js";
 export * from "./workflows.js";
 export * from "./workflow-runner.js";
+export * from "./evidence-store.js";
+export * from "./verification-runner.js";
