@@ -59,7 +59,7 @@ export class ModelRouter {
 
 export async function createModelRouter(config: DevOSConfig): Promise<ModelRouter> {
   const routes = [config.primaryRoute, ...config.fallbackRoutes];
-  const catalog = config.provider === "experiential"
+  const catalog = routes.some((route) => route.provider === "experiential")
     ? await loadExperientialCatalog(routes)
     : [];
   return new ModelRouter(routes, catalog);
