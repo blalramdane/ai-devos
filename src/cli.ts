@@ -63,7 +63,7 @@ async function main() {
   }
 
   if (command === "models") {
-    const router = createModelRouter(config);
+    const router = await createModelRouter(config);
     console.table(
       router.list().map((route) => ({
         id: route.id,
@@ -72,6 +72,8 @@ async function main() {
         priority: route.priority,
         tags: route.tags.join(", "),
         baseUrl: route.baseUrl,
+        tools: router.catalog().find((model) => model.id === route.model)?.supportsTools ?? "unknown",
+        context: router.catalog().find((model) => model.id === route.model)?.contextWindow ?? "unknown",
       })),
     );
     return;
@@ -81,7 +83,7 @@ async function main() {
     const [projectId, ...missionParts] = args;
     if (!projectId || missionParts.length === 0) usage();
     const project = await registry.get(projectId);
-    const route = createModelRouter(config).primary(missionParts.join(" "));
+    const route = (await createModelRouter(config)).primary(missionParts.join(" "));
     console.log(`\n[AI DevOS] ${project.name}\n[Route] ${route.provider} / ${route.model}\n`);
     const output = await runMission(project, missionParts.join(" "), config);
     console.log(output);
