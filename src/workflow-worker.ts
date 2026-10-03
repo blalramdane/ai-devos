@@ -1,5 +1,5 @@
 import type { Project } from "./domain.js";
-import { WorkflowRunner } from "./workflow-runner.js";
+
 import { WorkflowStore, type WorkflowRun } from "./workflows.js";
 
 export interface WorkflowWorkerOptions {
@@ -8,6 +8,10 @@ export interface WorkflowWorkerOptions {
 }
 
 export type ProjectResolver = (projectId: string) => Promise<Project>;
+export interface WorkflowRunnerLike {
+  start(project: Project, workflow: WorkflowRun): Promise<WorkflowRun>;
+  resume(project: Project, workflowId: string): Promise<WorkflowRun>;
+}
 
 export class WorkflowWorker {
   private readonly pollMs: number;
@@ -15,7 +19,7 @@ export class WorkflowWorker {
 
   constructor(
     private readonly workflows: WorkflowStore,
-    private readonly runner: WorkflowRunner,
+    private readonly runner: WorkflowRunnerLike,
     private readonly resolveProject: ProjectResolver,
     options: WorkflowWorkerOptions = {},
   ) {
