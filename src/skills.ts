@@ -1,80 +1,18 @@
-export interface SkillDefinition {
-  name: string;
-  triggers: string[];
-  instructions: string;
-}
-
-export const SKILLS: SkillDefinition[] = [
-  {
-    name: "engineering",
-    triggers: ["code","bug","fix","api","architecture","test","build","debug","refactor","deploy","repository","frontend","backend"],
-    instructions: "Use for code, repositories, APIs, architecture, debugging, tests, builds, deployment, and technical reviews. Bug workflow: Reproduce -> Evidence -> Root Cause -> Fix -> Test -> Verify. Feature workflow: Requirement -> Architecture -> Implementation -> Test -> Build -> Verify. Inspect existing implementation first; preserve contracts and prefer minimal reliable changes.",
-  },
-  {
-    name: "product",
-    triggers: ["feature","mvp","roadmap","requirement","prd","spec","scope","user story"],
-    instructions: "Use for product requirements, MVP scope, specifications, roadmaps, and prioritization. Clarify the outcome, constraints, acceptance criteria, and implementation implications.",
-  },
-  {
-    name: "research",
-    triggers: ["research","latest","current","compare","verify","documentation","investigate"],
-    instructions: "Use for research and verification. Prefer primary/official sources, cross-check important claims, separate facts from interpretation, and produce actionable evidence.",
-  },
-  {
-    name: "design",
-    triggers: ["ui","ux","design","brand","creative","accessibility","layout","interface"],
-    instructions: "Use for UI/UX, visual systems, accessibility, and creative implementation. Inspect existing design language and preserve consistency.",
-  },
-  {
-    name: "data",
-    triggers: ["csv","dataset","metrics","analytics","dashboard","sql","analysis","query"],
-    instructions: "Use for data analysis, metrics, dashboards, SQL, and structured datasets. Validate inputs, definitions, and calculations before conclusions.",
-  },
-  {
-    name: "operations",
-    triggers: ["sop","process","staffing","vendor","workflow","runbook","capacity","operations"],
-    instructions: "Use for operational processes, SOPs, staffing, vendors, runbooks, and capacity planning. Make responsibilities, inputs, outputs, and verification explicit.",
-  },
-  {
-    name: "marketing",
-    triggers: ["campaign","ads","content","growth","marketing","seo","social"],
-    instructions: "Use for marketing strategy, campaigns, content, growth, and measurement. Ground recommendations in the stated audience, offer, channel, and evidence.",
-  },
-  {
-    name: "sales",
-    triggers: ["lead","crm","outreach","pipeline","prospect","sales"],
-    instructions: "Use for leads, CRM, outreach, pipeline, and sales workflows. Keep customer/project data scoped to the active project.",
-  },
-  {
-    name: "finance",
-    triggers: ["budget","cash","invoice","profit","expense","financial"],
-    instructions: "Use for financial analysis, budgets, invoices, cash snapshots, and expense/profit workflows. Treat financial actions as high-sensitivity and require explicit authorization for external side effects.",
-  },
-  {
-    name: "hr",
-    triggers: ["hiring","interview","employee","onboarding","job post","hr"],
-    instructions: "Use for hiring, interview preparation, onboarding, and HR workflows. Keep personnel information project-scoped and private.",
-  },
-  {
-    name: "legal",
-    triggers: ["contract","policy","compliance","legal","terms","privacy"],
-    instructions: "Use for contract, policy, and compliance workflows. Identify uncertainty and avoid presenting legal conclusions as professional legal advice.",
-  },
-  {
-    name: "productivity",
-    triggers: ["task","priority","prioritize","status","continue","plan","todo","organize"],
-    instructions: "Use for task planning, status, priorities, and continuation of active work. Prefer execution over unnecessary planning when the task is clear.",
-  },
-];
-
-export function routeSkills(mission: string): SkillDefinition[] {
-  const text = mission.toLowerCase();
-  const scored = SKILLS.map((skill) => ({
-    skill,
-    score: skill.triggers.reduce((score, trigger) => score + (text.includes(trigger) ? 1 : 0), 0),
-  }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  return scored.length ? scored.slice(0, 3).map((item) => item.skill) : [SKILLS[0]];
-}
+export interface SkillDefinition{name:string;triggers:string[];workflow:string[];toolPreferences:string[];verification:string[];escalation:string[];outputFormat:string[];instructions:string;}
+const common={verification:["Check result against requirements","Never claim success without evidence"],escalation:["Ask before destructive, irreversible, production-impacting, or external side effects"]};
+const defs=[
+["engineering",["code","bug","fix","api","architecture","test","build","debug","refactor","deploy","repository","frontend","backend"],["Inspect","Reproduce/define","Implement","Test","Build","Verify"],["files/repository","shell/tests","git","browser"],"Preserve contracts; prefer minimal reliable changes."],
+["product",["feature","mvp","roadmap","requirement","prd","spec","scope","user story"],["Outcome","Users","Constraints","Acceptance","Scope","Implementation","Verify"],["project files","repository","research"],"Preserve existing product decisions unless changed."],
+["research",["research","latest","current","compare","verify","documentation","investigate"],["Question","Primary sources","Cross-check","Separate fact/interpretation","Synthesize"],["web","project files","official docs"],"Prefer primary sources and never invent evidence."],
+["design",["ui","ux","design","brand","creative","accessibility","layout","interface"],["Inspect language","Hierarchy","Implement","Responsive","Accessibility","Verify"],["design tools","image tools","repository"],"Preserve components, brand rules, and responsive behavior."],
+["data",["csv","dataset","metrics","analytics","dashboard","sql","analysis","query"],["Validate","Define metrics","Transform","Analyze","Cross-check","Report"],["files/data","Python","database"],"Validate definitions and calculations before conclusions."],
+["operations",["sop","process","staffing","vendor","workflow","runbook","capacity","operations"],["Inputs","Owner","Steps","Controls","Outputs","Verify"],["files","data/spreadsheets","automation"],"Make responsibilities and controls explicit."],
+["marketing",["campaign","ads","content","growth","marketing","seo","social"],["Audience","Offer","Message","Creative/channels","Measurement"],["web","design","analytics"],"Ground plans in audience, offer, channel, and evidence."],
+["sales",["lead","crm","outreach","pipeline","prospect","sales"],["Target","Qualify","Prepare","Execute","Track","Follow-up"],["CRM/integrations","files","web"],"Keep customer information project-scoped."],
+["finance",["budget","cash","invoice","profit","expense","financial"],["Collect","Validate","Calculate","Reconcile","Summarize"],["files/data","spreadsheets","finance integrations"],"Treat financial data as sensitive; validate important numbers."],
+["hr",["hiring","interview","employee","onboarding","job post","hr"],["Need","Criteria","Prepare","Execute","Document"],["files","calendar/email when authorized"],"Keep personnel data private; authorize external contact."],
+["legal",["contract","policy","compliance","legal","terms","privacy"],["Document","Obligations","Requirements","Uncertainty","Summary"],["project files","official sources","research"],"Flag uncertainty; escalate material legal uncertainty."],
+["productivity",["task","priority","prioritize","status","continue","plan","todo","organize"],["Current state","Priority","Execute","Update","Next"],["task store","project context","memory"],"Prefer execution when the task is clear."]
+] as const;
+export const SKILLS:SkillDefinition[]=defs.map(([name,triggers,workflow,toolPreferences,instructions])=>({name,triggers,workflow:[...workflow],toolPreferences:[...toolPreferences],verification:common.verification,escalation:common.escalation,outputFormat:["Done","Changed","Tested","Verified","Remaining Issues","Next Step"],instructions}));
+export function routeSkills(mission:string){const t=mission.toLowerCase();const s=SKILLS.map(skill=>({skill,score:skill.triggers.reduce((n,x)=>n+(t.includes(x)?1:0),0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);return s.length?s.slice(0,3).map(x=>x.skill):[SKILLS[0]];}
