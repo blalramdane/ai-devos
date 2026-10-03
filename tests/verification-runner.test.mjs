@@ -49,3 +49,23 @@ test("verification report ignores not-applicable evidence but requires applicabl
   assert.equal(report.requiredFailures, 0);
   assert.equal(report.notApplicable, 1);
 });
+
+
+test("nested project inside a Git repository is not treated as a Git project root", async () => {
+  const { EvidenceStore } = await import("../dist/evidence-store.js");
+  const { VerificationRunner } = await import("../dist/verification-runner.js");
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const fs = await import("node:fs/promises");
+  const os = await import("node:os");
+  const root = await fs.mkdtemp(os.tmpdir() + "/evidence-nested-git-");
+  const projectRoot = root + "/project";
+  await fs.mkdir(projectRoot);
+  await promisify(execFile)("git", ["init", root]);
+  const project = { id: "p", name: "Nested", rootPath: projectRoot };
+  const store = new EvidenceStore(root + "/data");
+  const runner = new VerificationRunner(store);
+  const items = await runner.verifyGit(project, "wf-1");
+  assert.equal(items[0].status, "not_applicable");
+  assert.equal(items[1].status, "not_applicable");
+});
