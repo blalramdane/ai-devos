@@ -21,6 +21,7 @@ Commands:
   audit <projectId>
   skills <mission>
   models
+  policy <mission>
   run <projectId> <mission>
 `);
   process.exit(1);
@@ -79,11 +80,22 @@ async function main() {
     return;
   }
 
+  if (command === "policy") {
+    const mission = args.join(" ");
+    if (!mission) usage();
+    const router = await createModelRouter(config);
+    const decision = router.policy(mission, config.modelPolicy);
+    console.log(JSON.stringify({ mission, policy: config.modelPolicy, selected: { id: decision.route.id, provider: decision.route.provider, model: decision.route.model }, reason: decision.reason, rejected: decision.rejected.map((item) => ({ id: item.route.id, model: item.route.model, reasons: item.reasons })) }, null, 2));
+    return;
+  }
+
   if (command === "run") {
     const [projectId, ...missionParts] = args;
     if (!projectId || missionParts.length === 0) usage();
     const project = await registry.get(projectId);
-    const route = (await createModelRouter(config)).primary(missionParts.join(" "));
+    const router = await createModelRouter(config);
+    const decision = router.policy(missionParts.join(" "), config.modelPolicy);
+    const route = decision.route;
     console.log(`\n[AI DevOS] ${project.name}\n[Route] ${route.provider} / ${route.model}\n`);
     const output = await runMission(project, missionParts.join(" "), config);
     console.log(output);
