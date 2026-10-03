@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import type { Project } from "./domain.js";
 import { runCommand } from "./runner.js";
+import { classifyCommand, requiresApproval } from "./policy.js";
 
 export interface ServiceStartOptions {
   command: string;
@@ -17,6 +18,10 @@ export interface ServiceHandle {
 
 export class ServiceRunner {
   async start(project: Project, options: ServiceStartOptions): Promise<ServiceHandle> {
+    const risk = classifyCommand(options.command);
+    if (requiresApproval(risk)) {
+      throw new Error(`Service command requires explicit approval (risk: ${risk}): ${options.command}`);
+    }
     const [program, ...args] = this.shellArgs(options.command);
     const child = spawn(program, args, {
       cwd: project.rootPath,
