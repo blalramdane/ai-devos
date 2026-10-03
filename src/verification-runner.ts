@@ -21,6 +21,12 @@ function hasScript(pkg: Record<string, unknown> | null, name: string) {
   return !!scripts && typeof scripts === "object" && scripts !== null && name in scripts;
 }
 
+function isGitWorkingTreeFailure(result: { exitCode: number; stdout: string; stderr: string }) {
+  if (result.exitCode !== 128 && result.exitCode !== 129) return false;
+  const text = (result.stderr + "\n" + result.stdout).toLowerCase();
+  return text.includes("not a git repository") || text.includes("not a git working tree");
+}
+
 export class VerificationRunner {
   constructor(private readonly evidence: EvidenceStore, private readonly dataDir?: string) {}
 
@@ -37,6 +43,7 @@ export class VerificationRunner {
         kind: name === "test" ? "test" : "lint",
         title: "npm run " + name,
         passed: !result.blocked && result.exitCode === 0,
+        status: !result.blocked && result.exitCode === 0 ? "passed" : "failed",
         summary: (result.stderr || result.stdout).slice(-4000),
         command,
         exitCode: result.exitCode,
@@ -53,7 +60,9 @@ export class VerificationRunner {
         kind: "command",
         title: "Verification discovery",
         passed: false,
+        status: "not_applicable",
         summary: "No npm check/test scripts were discovered in package.json.",
+        metadata: { reason: "no-test-scripts" },
       };
       await this.evidence.add(project.id, workflowId, item);
       results.push(item);
@@ -65,24 +74,32 @@ export class VerificationRunner {
   async verifyGit(project: Project, workflowId: string): Promise<Evidence[]> {
     const status = await runCommand("git status --short --branch", project.rootPath);
     const diff = await runCommand("git diff --stat", project.rootPath);
+    const notGit = isGitWorkingTreeFailure(status) || isGitWorkingTreeFailure(diff);
+    const statusApplicable = !isGitWorkingTreeFailure(status);
+    const diffApplicable = !isGitWorkingTreeFailure(diff);
+
     const items: Evidence[] = [
       {
         id: "evidence-" + Date.now().toString(36) + "-git-status",
         kind: "git",
         title: "Git status",
-        passed: !status.blocked && status.exitCode === 0,
-        summary: status.stdout.slice(-4000),
+        passed: statusApplicable && !status.blocked && status.exitCode === 0,
+        status: !statusApplicable ? "not_applicable" : status.blocked || status.exitCode !== 0 ? "failed" : "passed",
+        summary: status.stdout.slice(-4000) || (notGit ? "Project is not a Git working tree." : status.stderr.slice(-4000)),
         command: status.command,
         exitCode: status.exitCode,
+        metadata: notGit ? { reason: "not-git-working-tree" } : undefined,
       },
       {
         id: "evidence-" + Date.now().toString(36) + "-git-diff",
         kind: "git",
         title: "Git diff summary",
-        passed: !diff.blocked && diff.exitCode === 0,
-        summary: diff.stdout.slice(-4000),
+        passed: diffApplicable && !diff.blocked && diff.exitCode === 0,
+        status: !diffApplicable ? "not_applicable" : diff.blocked || diff.exitCode !== 0 ? "failed" : "passed",
+        summary: diff.stdout.slice(-4000) || (notGit ? "Project is not a Git working tree." : diff.stderr.slice(-4000)),
         command: diff.command,
         exitCode: diff.exitCode,
+        metadata: notGit ? { reason: "not-git-working-tree" } : undefined,
       },
     ];
     for (const item of items) await this.evidence.add(project.id, workflowId, item);
@@ -163,7 +180,7 @@ export class VerificationRunner {
       if (browserUrl) {
         results.push(await this.verifyBrowser(project, workflowId, browserUrl, browser));
       }
-      if (results.some((item) => !item.passed)) {
+      if (results.some((item) => item.status !== "not_applicable" && !item.passed)) {
         throw new Error("Service verification failed.");
       }
     });
