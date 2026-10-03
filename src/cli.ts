@@ -5,6 +5,7 @@ import { ProjectRegistry } from "./projects.js";
 import { runMission } from "./agent.js";
 import { auditProject } from "./audit.js";
 import { routeSkills } from "./skills.js";
+import { createModelRouter } from "./model-router.js";
 
 const config = loadConfig();
 const registry = new ProjectRegistry(config.dataDir);
@@ -19,6 +20,7 @@ Commands:
   projects
   audit <projectId>
   skills <mission>
+  models
   run <projectId> <mission>
 `);
   process.exit(1);
@@ -60,11 +62,27 @@ async function main() {
     return;
   }
 
+  if (command === "models") {
+    const router = createModelRouter(config);
+    console.table(
+      router.list().map((route) => ({
+        id: route.id,
+        provider: route.provider,
+        model: route.model,
+        priority: route.priority,
+        tags: route.tags.join(", "),
+        baseUrl: route.baseUrl,
+      })),
+    );
+    return;
+  }
+
   if (command === "run") {
     const [projectId, ...missionParts] = args;
     if (!projectId || missionParts.length === 0) usage();
     const project = await registry.get(projectId);
-    console.log(`\n[AI DevOS] ${project.name}\n[Model] ${config.provider} / ${config.model}\n`);
+    const route = createModelRouter(config).primary(missionParts.join(" "));
+    console.log(`\n[AI DevOS] ${project.name}\n[Route] ${route.provider} / ${route.model}\n`);
     const output = await runMission(project, missionParts.join(" "), config);
     console.log(output);
     return;
