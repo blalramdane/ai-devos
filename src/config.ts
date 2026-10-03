@@ -54,15 +54,15 @@ function routeFromProvider(
   overrides: Partial<Pick<ModelRoute, "baseUrl" | "apiKey" | "model">> = {},
 ): ModelRoute {
   const defaults = providerDefaults(provider, env);
-  const baseUrl = overrides.baseUrl ?? defaults.baseUrl;
+  const baseUrl = overrides.baseUrl?.trim() || defaults.baseUrl;
   if (!baseUrl) throw new Error(`Missing base URL for ${provider} model route.`);
 
   return {
     id: provider,
     provider,
     baseUrl: baseUrl.replace(/\/$/, ""),
-    apiKey: overrides.apiKey ?? defaults.apiKey,
-    model: overrides.model ?? defaults.model,
+    apiKey: overrides.apiKey?.trim() || defaults.apiKey,
+    model: overrides.model?.trim() || defaults.model,
     priority: 100,
     tags: [],
   };
