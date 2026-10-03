@@ -206,6 +206,19 @@ async function main() {
       await events.append({ type: "workflow.approval.granted", workflowId: approval.workflowId, projectId, payload: { approvalId } });
       console.log(JSON.stringify(approval, null, 2)); return;
     }
+    if (action === "verify-service") {
+      const [workflowId, serviceCommand, readyUrl, browserUrl, selector, ...containsParts] = rest;
+      if (!workflowId || !serviceCommand || !readyUrl) usage();
+      const items = await verification.verifyService(
+        project,
+        workflowId,
+        { command: serviceCommand, readyUrl },
+        browserUrl,
+        { selector, contains: containsParts.length ? containsParts.join(" ") : undefined },
+      );
+      console.log(JSON.stringify(items, null, 2));
+      return;
+    }
     if (action === "verify-http") {
       const [workflowId, url, expectedStatusRaw, ...containsParts] = rest;
       if (!workflowId || !url) usage();
