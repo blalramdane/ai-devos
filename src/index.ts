@@ -18,3 +18,5 @@ export * from "./workflows.js";
 export * from "./workflow-runner.js";
 export * from "./evidence-store.js";
 export * from "./verification-runner.js";
+export * from "./workflow-worker.js";
+export * from "./workflow-lock.js";
