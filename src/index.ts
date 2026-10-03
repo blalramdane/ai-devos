@@ -20,3 +20,6 @@ export * from "./evidence-store.js";
 export * from "./verification-runner.js";
 export * from "./workflow-worker.js";
 export * from "./workflow-lock.js";
+
+export * from "./http-verifier.js";
+export * from "./browser-verifier.js";
