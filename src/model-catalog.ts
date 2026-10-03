@@ -9,6 +9,8 @@ export interface ModelCatalogEntry {
   outputModalities?: string[];
   supportsTools?: boolean;
   supportsReasoning?: boolean;
+  inputCostPerMillion?: number;
+  outputCostPerMillion?: number;
   raw: Record<string, unknown>;
 }
 
@@ -53,6 +55,8 @@ export function normalizeModelCatalogEntry(raw: Record<string, unknown>): ModelC
       raw.reasoning,
       supports?.reasoning,
     ),
+    inputCostPerMillion: numberValue(raw.input_cost_per_million, raw.inputCostPerMillion, raw.input_price_per_million, raw.inputPricePerMillion, (raw.pricing as Record<string, unknown> | undefined)?.input_per_million, (raw.pricing as Record<string, unknown> | undefined)?.input),
+    outputCostPerMillion: numberValue(raw.output_cost_per_million, raw.outputCostPerMillion, raw.output_price_per_million, raw.outputPricePerMillion, (raw.pricing as Record<string, unknown> | undefined)?.output_per_million, (raw.pricing as Record<string, unknown> | undefined)?.output),
     raw,
   };
 }
