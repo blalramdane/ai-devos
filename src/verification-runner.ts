@@ -72,40 +72,70 @@ export class VerificationRunner {
   }
 
   async verifyGit(project: Project, workflowId: string): Promise<Evidence[]> {
+    const root = await import("node:path").then(({ resolve }) => resolve(project.rootPath));
+    const topLevel = await runCommand("git rev-parse --show-toplevel", project.rootPath);
+    const detectedRoot = topLevel.exitCode === 0 ? topLevel.stdout.trim() : "";
+    const isProjectGitRoot = !!detectedRoot && (await import("node:path")).resolve(detectedRoot) === root;
+
+    if (!isProjectGitRoot) {
+      const reason = topLevel.exitCode === 0
+        ? "Project root is inside another Git working tree, but is not itself the repository root."
+        : "Project is not a Git working tree.";
+      const items: Evidence[] = [
+        {
+          id: "evidence-" + Date.now().toString(36) + "-git-status",
+          kind: "git",
+          title: "Git status",
+          passed: false,
+          status: "not_applicable",
+          summary: reason,
+          command: "git status --short --branch",
+          exitCode: topLevel.exitCode,
+          metadata: { reason: "not-project-git-root", detectedRoot: detectedRoot || undefined },
+        },
+        {
+          id: "evidence-" + Date.now().toString(36) + "-git-diff",
+          kind: "git",
+          title: "Git diff summary",
+          passed: false,
+          status: "not_applicable",
+          summary: reason,
+          command: "git diff --stat",
+          exitCode: topLevel.exitCode,
+          metadata: { reason: "not-project-git-root", detectedRoot: detectedRoot || undefined },
+        },
+      ];
+      for (const item of items) await this.evidence.add(project.id, workflowId, item);
+      return items;
+    }
+
     const status = await runCommand("git status --short --branch", project.rootPath);
     const diff = await runCommand("git diff --stat", project.rootPath);
-    const notGit = isGitWorkingTreeFailure(status) || isGitWorkingTreeFailure(diff);
-    const statusApplicable = !isGitWorkingTreeFailure(status);
-    const diffApplicable = !isGitWorkingTreeFailure(diff);
-
     const items: Evidence[] = [
       {
         id: "evidence-" + Date.now().toString(36) + "-git-status",
         kind: "git",
         title: "Git status",
-        passed: statusApplicable && !status.blocked && status.exitCode === 0,
-        status: !statusApplicable ? "not_applicable" : status.blocked || status.exitCode !== 0 ? "failed" : "passed",
-        summary: status.stdout.slice(-4000) || (notGit ? "Project is not a Git working tree." : status.stderr.slice(-4000)),
+        passed: !status.blocked && status.exitCode === 0,
+        status: !status.blocked && status.exitCode === 0 ? "passed" : "failed",
+        summary: status.stdout.slice(-4000) || status.stderr.slice(-4000),
         command: status.command,
         exitCode: status.exitCode,
-        metadata: notGit ? { reason: "not-git-working-tree" } : undefined,
       },
       {
         id: "evidence-" + Date.now().toString(36) + "-git-diff",
         kind: "git",
         title: "Git diff summary",
-        passed: diffApplicable && !diff.blocked && diff.exitCode === 0,
-        status: !diffApplicable ? "not_applicable" : diff.blocked || diff.exitCode !== 0 ? "failed" : "passed",
-        summary: diff.stdout.slice(-4000) || (notGit ? "Project is not a Git working tree." : diff.stderr.slice(-4000)),
+        passed: !diff.blocked && diff.exitCode === 0,
+        status: !diff.blocked && diff.exitCode === 0 ? "passed" : "failed",
+        summary: diff.stdout.slice(-4000) || diff.stderr.slice(-4000),
         command: diff.command,
         exitCode: diff.exitCode,
-        metadata: notGit ? { reason: "not-git-working-tree" } : undefined,
       },
     ];
     for (const item of items) await this.evidence.add(project.id, workflowId, item);
     return items;
   }
-
   async verifyHttp(project: Project, workflowId: string, url: string, options: HttpVerificationOptions = {}) {
     return new HttpVerifier(this.evidence).verify(project, workflowId, url, options);
   }
