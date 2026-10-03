@@ -12,6 +12,8 @@ import { WorkflowStore } from "./workflows.js";
 import { WorkflowRunner } from "./workflow-runner.js";
 import { EvidenceStore } from "./evidence-store.js";
 import { VerificationRunner } from "./verification-runner.js";
+import { WorkflowWorker } from "./workflow-worker.js";
+import { WorkflowLock } from "./workflow-lock.js";
 
 const config = loadConfig();
 const registry = new ProjectRegistry(config.dataDir);
@@ -109,6 +111,52 @@ async function main() {
     return;
   }
 
+  if (command === "worker") {
+    const [action] = args;
+    if (!action || !["once", "start"].includes(action)) usage();
+    const workflows = new WorkflowStore(config.dataDir);
+    const events = new EventStore(config.dataDir);
+    const approvals = new ApprovalStore(config.dataDir);
+    const evidence = new EvidenceStore(config.dataDir);
+    const verification = new VerificationRunner(evidence);
+    const runner = new WorkflowRunner(workflows, events, approvals, {
+      handlers: {
+        understand: async ({ project }) => JSON.stringify(await auditProject(project)),
+        plan: async ({ workflow }) => {
+          const router = await createModelRouter(config);
+          const decision = router.policy(workflow.mission, config.modelPolicy);
+          return JSON.stringify({ route: decision.route.id, reason: decision.reason, skills: routeSkills(workflow.mission).map((skill) => skill.name) });
+        },
+        execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
+        test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
+        verify: async ({ project, workflow }) => JSON.stringify(await verification.verifyGit(project, workflow.id)),
+        finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
+      },
+    });
+    const lock = new WorkflowLock(config.dataDir);
+    const workerRunner = new WorkflowRunner(workflows, events, approvals, {
+      handlers: {
+        understand: async ({ project }) => JSON.stringify(await auditProject(project)),
+        plan: async ({ workflow }) => {
+          const router = await createModelRouter(config);
+          const decision = router.policy(workflow.mission, config.modelPolicy);
+          return JSON.stringify({ route: decision.route.id, reason: decision.reason, skills: routeSkills(workflow.mission).map((skill) => skill.name) });
+        },
+        execute: async ({ project, workflow }) => runMission(project, workflow.mission, config),
+        test: async ({ project, workflow }) => JSON.stringify(await verification.runTests(project, workflow.id)),
+        verify: async ({ project, workflow }) => JSON.stringify(await verification.verifyGit(project, workflow.id)),
+        finalize: async ({ workflow }) => "Workflow " + workflow.id + " completed and state persisted.",
+      },
+    });
+    const worker = new WorkflowWorker(workflows, {
+      async start(project, workflow) { const release = await lock.acquire(workflow.id); try { return await workerRunner.start(project, workflow); } finally { await release(); } },
+      async resume(project, workflowId) { const release = await lock.acquire(workflowId); try { return await workerRunner.resume(project, workflowId); } finally { await release(); } },
+    } as unknown as WorkflowRunner, async (projectId) => registry.get(projectId));
+    if (action === "once") { console.log(JSON.stringify(await worker.runOnce(), null, 2)); return; }
+    await worker.start();
+    return;
+  }
+
   if (command === "workflow") {
     const [action, projectId, ...rest] = args;
     if (!action || !projectId) usage();
@@ -134,7 +182,7 @@ async function main() {
       },
     });
 
-    if (action === "start") {
+    if (action === "enqueue") {\n      const mission = rest.join(" "); if (!mission) usage();\n      console.log(JSON.stringify(await workflows.create(projectId, mission), null, 2)); return;\n    }\n    if (action === "start") {
       const mission = rest.join(" "); if (!mission) usage();
       const workflow = await workflows.create(projectId, mission);
       console.log(JSON.stringify(await runner.start(project, workflow), null, 2));
