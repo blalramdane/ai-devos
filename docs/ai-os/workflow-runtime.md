@@ -43,3 +43,22 @@ High/critical actions can create an approval request. The workflow moves to wait
 ## Design boundary
 
 V1 deliberately uses local JSON/JSONL persistence instead of a distributed queue. The next upgrade can move the same contracts to SQLite/Postgres, add background workers, richer evidence objects, and real-time UI without changing the workflow concepts.
+
+## Verification evidence adapters
+
+The verification layer can collect evidence beyond unit tests and Git state:
+
+- HTTP verification checks a local HTTP endpoint by default, records status, headers, and a bounded body excerpt.
+- Browser verification uses Playwright and can assert that a selector exists or that page text contains an expected value.
+- External URLs are blocked by default for both adapters; enabling external verification must be an explicit caller decision.
+- Evidence is persisted under `.aidevos/<projectId>/workflows/<workflowId>/evidence.json`.
+
+CLI examples:
+
+```bash
+aidevos workflow verify-http my-project wf-123 http://127.0.0.1:3000/health 200 "ok"
+aidevos workflow verify-browser my-project wf-123 http://127.0.0.1:3000 "#app" "Dashboard"
+aidevos workflow evidence my-project wf-123
+```
+
+Browser verification requires a Playwright browser binary to be installed in the execution environment. The adapter records a failed evidence item instead of hiding launch/navigation errors.
